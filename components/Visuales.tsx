@@ -180,7 +180,7 @@ export function Visuales({
   }
 
   const accion =
-    "inline-flex items-center gap-1.5 border border-borde bg-white px-2.5 py-1.5 font-medium text-tinta transition hover:border-marca hover:text-marca disabled:cursor-not-allowed disabled:opacity-40";
+    "inline-flex items-center gap-1.5 border border-marca/35 bg-marca-suave/60 px-2.5 py-1.5 font-semibold text-marca shadow-[0_1px_1px_rgba(16,24,40,0.06)] transition hover:border-marca hover:bg-marca hover:text-white disabled:cursor-not-allowed disabled:opacity-40";
   const mensajeCarga =
     tipo === "infografia" ? "Diseñando la infografía…" : tipo === "mapa" ? "Organizando las ideas del mapa mental…" : "Diseñando el diagrama de flujo…";
 

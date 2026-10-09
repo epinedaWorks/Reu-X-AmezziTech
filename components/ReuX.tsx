@@ -572,8 +572,10 @@ function Boton({
       onClick={onClick}
       disabled={disabled}
       title={titulo}
-      className={`inline-flex items-center gap-1.5 border px-2.5 py-1.5 font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
-        principal ? "border-marca bg-marca text-white hover:bg-marca-hover" : "border-borde bg-white text-tinta hover:border-marca hover:text-marca"
+      className={`inline-flex items-center gap-1.5 border px-2.5 py-1.5 font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+        principal
+          ? "border-marca bg-marca text-white shadow-sm hover:bg-marca-hover"
+          : "border-marca/35 bg-marca-suave/60 text-marca shadow-[0_1px_1px_rgba(16,24,40,0.06)] hover:border-marca hover:bg-marca hover:text-white"
       }`}
     >
       {Icono && <Icono size={14} />}
