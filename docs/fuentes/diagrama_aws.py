@@ -5,83 +5,16 @@ Salida:  docs/Reu-X_Arquitectura_AWS.png
 Íconos:  docs/fuentes/iconos/ (AWS Architecture Icons y logos de terceros, vía el paquete
          `diagrams`; se usan solo para representar la arquitectura).
 """
+import sys
 from pathlib import Path
 
-import matplotlib
+sys.path.insert(0, str(Path(__file__).parent))
+from aws_estilo import *  # noqa: E402,F403
+import aws_estilo as e  # noqa: E402
 
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
-from PIL import Image
-
-AQUI = Path(__file__).parent
-ICONOS = AQUI / "iconos"
-SALIDA = AQUI.parent / "Reu-X_Arquitectura_AWS.png"
-
-NEGRO = "#232f3e"
-GRIS = "#545b64"
-NARANJA = "#ff9900"
-REGION = "#00a4a6"
-VPC = "#8c4fff"
-SUBRED = "#7aa116"
-SG = "#dd344c"
-FLUJO = "#232f3e"
-
-plt.rcParams["font.family"] = "DejaVu Sans"
-
-fig, ax = plt.subplots(figsize=(21, 13), dpi=150)
-ax.set_xlim(0, 210)
-ax.set_ylim(0, 130)
-ax.set_aspect("equal")
-ax.axis("off")
-
-
-def icono(nombre, x, y, alto=9.0, z=6):
-    im = Image.open(ICONOS / f"{nombre}.png").convert("RGBA")
-    ancho = alto * im.width / im.height
-    ax.imshow(im, extent=(x - ancho / 2, x + ancho / 2, y - alto / 2, y + alto / 2), zorder=z, interpolation="lanczos")
-    return ancho
-
-
-def etiqueta(x, y, titulo, detalle="", color=NEGRO, tam=10.5):
-    ax.text(x, y, titulo, ha="center", va="top", fontsize=tam, fontweight="bold", color=color, zorder=7)
-    if detalle:
-        ax.text(x, y - 2.6, detalle, ha="center", va="top", fontsize=tam - 2, color=GRIS, zorder=7, linespacing=1.3)
-
-
-def servicio(nombre, x, y, titulo, detalle="", alto=9.0):
-    icono(nombre, x, y, alto)
-    etiqueta(x, y - alto / 2 - 1.2, titulo, detalle)
-
-
-def grupo(x0, y0, x1, y1, texto, color, icono_nombre=None, discontinuo=False, relleno="none", tam=10):
-    ax.add_patch(Rectangle((x0, y0), x1 - x0, y1 - y0, linewidth=1.6, edgecolor=color, facecolor=relleno,
-                           linestyle=(0, (5, 3)) if discontinuo else "solid", zorder=1))
-    dx = 0
-    if icono_nombre:
-        ax.add_patch(Rectangle((x0, y1 - 5), 5, 5, facecolor="white", edgecolor="none", zorder=2))
-        icono(icono_nombre, x0 + 2.5, y1 - 2.5, 4.6, z=3)
-        dx = 6
-    ax.text(x0 + dx + 1, y1 - 2.6, texto, ha="left", va="center", fontsize=tam, color=color, fontweight="bold", zorder=3)
-
-
-def flecha(a, b, num=None, texto="", curva=0.0, discontinua=False, color=FLUJO, pos=0.5, desp=(0, 0), doble=False,
-           conexion=None, en=None):
-    ax.add_patch(FancyArrowPatch(a, b, arrowstyle="<|-|>" if doble else "-|>", mutation_scale=15, linewidth=1.7, color=color,
-                                 connectionstyle=conexion or f"arc3,rad={curva}",
-                                 linestyle=(0, (4, 3)) if discontinua else "solid", zorder=4))
-    mx = a[0] + (b[0] - a[0]) * pos + desp[0]
-    my = a[1] + (b[1] - a[1]) * pos + desp[1]
-    if en:
-        mx, my = en
-    if num:
-        ax.add_patch(plt.Circle((mx, my), 1.9, color=NEGRO, zorder=8))
-        ax.text(mx, my, str(num), ha="center", va="center", fontsize=10, color="white", fontweight="bold", zorder=9)
-    if texto:
-        tx = mx + (2.8 if num else 0)
-        ax.text(tx, my, texto, ha="left" if num else "center", va="center", fontsize=8.6, color=GRIS, zorder=8,
-                bbox=dict(boxstyle="round,pad=0.2", facecolor="white", edgecolor="none", alpha=0.92))
-
+SALIDA = DOCS / "Reu-X_Arquitectura_AWS.png"
+lienzo(210, 130)
+ax = e.ax
 
 # ───────── encabezado ─────────
 ax.text(2, 127.5, "Reu-X · Arquitectura en AWS", fontsize=21, fontweight="bold", color=NEGRO, va="top")
@@ -151,15 +84,6 @@ pasos = [
     ("5", "Al arrancar, el servidor obtiene usuario, contraseña y secreto de sesión de Parameter Store."),
     ("6", "publicar.sh ordena por Systems Manager: git pull desde GitHub, compilar y reiniciar."),
 ]
-x0, y0 = 31, 15.5
-for i, (n, t) in enumerate(pasos):
-    col, fila = divmod(i, 3)
-    x = x0 + col * 88
-    y = y0 - fila * 4.6
-    ax.add_patch(plt.Circle((x + 1.5, y), 1.5, color=NEGRO, zorder=8))
-    ax.text(x + 1.5, y, n, ha="center", va="center", fontsize=8.5, color="white", fontweight="bold", zorder=9)
-    ax.text(x + 4, y, t, ha="left", va="center", fontsize=9, color=NEGRO)
+leyenda(pasos, 31, 15.5)
 
-fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01)
-fig.savefig(SALIDA, facecolor="white")
-print("Generado:", SALIDA)
+guardar(SALIDA)

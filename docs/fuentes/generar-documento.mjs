@@ -9,7 +9,8 @@ import {
 } from "docx";
 
 const aqui = path.dirname(fileURLToPath(import.meta.url));
-const SALIDA = path.join(aqui, "..", "Reu-X_Documentacion_Tecnica.docx");
+// Ruta de salida opcional como argumento (útil si el .docx está abierto en Word).
+const SALIDA = process.argv[2] ? path.resolve(process.argv[2]) : path.join(aqui, "..", "Reu-X_Documentacion_Tecnica.docx");
 
 const MARCA = "1B2A41";
 const ACENTO = "9A7B4F";
@@ -259,7 +260,8 @@ const arquitectura = [
   H1("3. Arquitectura"),
   P("Reu-X es una aplicación web Next.js que corre en un servidor EC2 dentro de la cuenta AWS de Amezzi Tech. El navegador sube las grabaciones directamente a S3; la aplicación orquesta Amazon Transcribe y Claude en Amazon Bedrock, y protege el acceso con usuarios y perfiles."),
   ...imagen("../Reu-X_Arquitectura_AWS.png", 624, 386, "Figura 1. Arquitectura de Reu-X en AWS (región us-west-1), con los íconos oficiales de cada servicio."),
-  ...imagen("flujo.png", 624, 250, "Figura 2. Flujo de procesamiento de una reunión."),
+  ...imagen("../Reu-X_Nucleo_AWS.png", 624, 362, "Figura 2. Núcleo de procesamiento: de la grabación a la minuta y los visuales (sin componentes de soporte)."),
+  ...imagen("flujo.png", 624, 250, "Figura 3. Flujo de procesamiento de una reunión."),
   H2("3.1 Servicios que intervienen"),
   tabla(
     ["Servicio", "Qué hace en Reu-X", "Detalle"],
