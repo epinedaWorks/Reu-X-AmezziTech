@@ -1,6 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Check, Circle, CircleAlert, CircleCheck, Copy, Download, FileCheck, FileDown, FileText, LoaderCircle, Mic,
+  Network, Printer, RefreshCw, ScrollText, Server, Type, Upload, X,
+} from "lucide-react";
 import { MinutaVista } from "./MinutaVista";
 import { Visuales, type Imagen } from "./Visuales";
 import { REUNION_EJEMPLO } from "@/lib/ejemplo";
@@ -51,7 +55,6 @@ export function ReuX() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [texto, setTexto] = useState("");
   const [contexto, setContexto] = useState<Contexto>(CONTEXTO_VACIO);
-  const [verContexto, setVerContexto] = useState(false);
 
   const [etapa, setEtapa] = useState<Etapa | null>(null);
   const [progreso, setProgreso] = useState(0);
@@ -200,60 +203,54 @@ export function ReuX() {
 
   const ocupado = etapa !== null;
   const segundos = Math.max(0, Math.round((ahora - inicioEtapa) / 1000));
+  const puedeGenerar = fuente === "archivo" ? Boolean(archivo) : Boolean(texto.trim());
+
+  const campo =
+    "w-full border border-borde bg-white px-2.5 py-1.5 text-[13.5px] text-tinta outline-none transition placeholder:text-[#a0a7b2] focus:border-marca focus:ring-2 focus:ring-marca/10";
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="no-print border-b border-indigo-950 bg-indigo-950 text-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-sky-400 to-indigo-500 text-lg font-black">
-              R
-            </div>
-            <div>
-              <h1 className="text-lg font-bold leading-tight">
-                Reu<span className="text-sky-400">-X</span>
-              </h1>
-              <p className="text-xs text-indigo-200">by Amezzi · Minutas inteligentes</p>
-            </div>
+    <div className="flex min-h-dvh flex-col lg:h-dvh">
+      {/* Barra superior */}
+      <header className="no-print flex h-14 shrink-0 items-center justify-between border-b border-borde bg-white px-5">
+        <div className="flex items-center gap-4">
+          <div className="grid h-8 w-8 place-items-center bg-marca font-serif text-[15px] font-bold text-white">R</div>
+          <div className="flex items-baseline gap-3">
+            <span className="text-[15px] font-semibold tracking-tight text-marca">Reu-X</span>
+            <span className="hidden h-4 w-px bg-borde sm:block" />
+            <span className="hidden text-[13px] text-tenue sm:block">Actas y minutas de reunión</span>
           </div>
-          {minuta && (
-            <button onClick={nuevaReunion} className="rounded-lg border border-indigo-400/40 px-3 py-1.5 text-sm hover:bg-white/10">
-              + Nueva reunión
-            </button>
-          )}
+        </div>
+        <div className="flex items-center gap-3 text-[12.5px]">
+          <span className="hidden items-center gap-1.5 text-tenue md:inline-flex">
+            <Server size={14} /> AWS · us-west-1
+          </span>
+          {demo && <span className="border border-acento/40 bg-acento/10 px-2 py-0.5 font-medium text-acento">Modo demostración</span>}
+          <span className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] text-tenue sm:block">Amezzi</span>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        {error && (
-          <div role="alert" className="no-print mb-6 flex items-start justify-between gap-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="font-semibold" aria-label="Cerrar">×</button>
-          </div>
-        )}
-
-        {!minuta && (
-          <div className="mx-auto max-w-3xl">
-            <div className="mb-8 text-center">
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                De la reunión a la minuta, en minutos.
-              </h2>
-              <p className="mt-3 text-slate-600">
-                Sube la grabación (audio o video) o pega la transcripción. Reu-X la transcribe, identifica a quienes hablan y
-                redacta una minuta formal con acuerdos y tareas, más un mapa mental, diagramas y una infografía listos para compartir.
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-7">
-              <div className="mb-5 inline-flex rounded-lg bg-slate-100 p-1 text-sm font-medium">
-                {(["archivo", "texto"] as const).map((f) => (
+      <div className="flex flex-1 flex-col lg:grid lg:min-h-0 lg:grid-cols-[340px_minmax(0,1fr)]">
+        {/* Panel de entrada */}
+        <aside className="no-print panel-scroll flex flex-col border-b border-borde bg-white lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
+          <div className="flex-1 space-y-5 p-5">
+            <section>
+              <Encabezado n={1} titulo="Fuente de la reunión" />
+              <div className="mt-3 grid grid-cols-2 border border-borde text-[13px] font-medium">
+                {(
+                  [
+                    ["archivo", "Grabación", Mic],
+                    ["texto", "Texto", Type],
+                  ] as const
+                ).map(([f, nombre, Icono], i) => (
                   <button
                     key={f}
                     disabled={ocupado}
                     onClick={() => setFuente(f)}
-                    className={`rounded-md px-4 py-1.5 transition ${fuente === f ? "bg-white text-indigo-900 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
+                    className={`inline-flex items-center justify-center gap-2 py-2 transition ${i > 0 ? "border-l border-borde" : ""} ${
+                      fuente === f ? "bg-marca text-white" : "text-tenue hover:bg-fondo hover:text-tinta"
+                    }`}
                   >
-                    {f === "archivo" ? "🎙️ Audio o video" : "📝 Texto"}
+                    <Icono size={15} /> {nombre}
                   </button>
                 ))}
               </div>
@@ -266,7 +263,7 @@ export function ReuX() {
                     if (!ocupado) elegirArchivo(e.dataTransfer.files[0]);
                   }}
                   onClick={() => !ocupado && inputArchivo.current?.click()}
-                  className="cursor-pointer rounded-xl border-2 border-dashed border-slate-300 px-6 py-10 text-center transition hover:border-indigo-400 hover:bg-indigo-50/40"
+                  className="mt-3 cursor-pointer border border-dashed border-[#b9c1cc] bg-fondo px-4 py-5 text-center transition hover:border-marca hover:bg-marca-suave/50"
                 >
                   <input
                     ref={inputArchivo}
@@ -277,31 +274,29 @@ export function ReuX() {
                   />
                   {archivo ? (
                     <>
-                      <p className="text-3xl">{archivo.type.startsWith("video") ? "🎬" : "🎧"}</p>
-                      <p className="mt-2 font-semibold text-slate-900">{archivo.name}</p>
-                      <p className="text-sm text-slate-500">{tamanoLegible(archivo.size)} · clic para cambiar</p>
+                      <FileCheck size={22} className="mx-auto text-exito" />
+                      <p className="mt-2 break-all text-[13.5px] font-medium text-tinta">{archivo.name}</p>
+                      <p className="text-[12px] text-tenue">{tamanoLegible(archivo.size)} · Clic para cambiar</p>
                     </>
                   ) : (
                     <>
-                      <p className="text-3xl">⬆️</p>
-                      <p className="mt-2 font-semibold text-slate-900">Arrastra aquí la grabación o haz clic para elegirla</p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {EXTENSIONES_MEDIA.join(", ").toUpperCase()} · hasta 2 GB / 4 horas
-                      </p>
+                      <Upload size={22} className="mx-auto text-tenue" />
+                      <p className="mt-2 text-[13.5px] font-medium text-tinta">Arrastre la grabación o haga clic</p>
+                      <p className="mt-0.5 text-[12px] text-tenue">MP3, MP4, M4A, WAV y otros · hasta 2 GB</p>
                     </>
                   )}
                 </div>
               ) : (
-                <div>
+                <div className="mt-3">
                   <textarea
                     value={texto}
                     onChange={(e) => setTexto(e.target.value)}
                     disabled={ocupado}
-                    rows={12}
-                    placeholder="Pega aquí la transcripción, las notas o el chat de la reunión…"
-                    className="w-full resize-y rounded-xl border border-slate-300 p-4 text-sm leading-relaxed outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    rows={5}
+                    placeholder="Pegue la transcripción, las notas o el chat de la reunión."
+                    className={`${campo} panel-scroll resize-y leading-relaxed`}
                   />
-                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <div className="mt-1.5 flex items-center justify-between text-[12px]">
                     <div className="flex gap-3">
                       <input
                         ref={inputTexto}
@@ -310,190 +305,247 @@ export function ReuX() {
                         accept={EXTENSIONES_TEXTO.map((e) => `.${e}`).join(",")}
                         onChange={(e) => elegirArchivo(e.target.files?.[0])}
                       />
-                      <button onClick={() => inputTexto.current?.click()} className="font-medium text-indigo-700 hover:underline">
-                        Cargar .txt / .vtt / .srt
+                      <button onClick={() => inputTexto.current?.click()} className="font-medium text-marca hover:underline">
+                        Cargar archivo
                       </button>
-                      <button onClick={() => setTexto(REUNION_EJEMPLO)} className="font-medium text-indigo-700 hover:underline">
-                        Usar reunión de ejemplo
+                      <button onClick={() => setTexto(REUNION_EJEMPLO)} className="font-medium text-marca hover:underline">
+                        Usar ejemplo
                       </button>
                     </div>
-                    <span className="text-slate-500">{texto.length.toLocaleString("es")} caracteres</span>
+                    <span className="text-tenue">{texto.length.toLocaleString("es")} caracteres</span>
                   </div>
                 </div>
               )}
+            </section>
 
-              <button
-                onClick={() => setVerContexto((v) => !v)}
-                className="mt-5 text-sm font-medium text-slate-700 hover:text-indigo-800"
-              >
-                {verContexto ? "▾" : "▸"} Datos de la reunión (opcional)
-              </button>
-              {verContexto && (
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {(
-                    [
-                      ["titulo", "Título", "Comité de proyecto semanal"],
-                      ["fecha", "Fecha", "9 de octubre de 2026"],
-                      ["lugar", "Lugar o plataforma", "Sala B / Zoom"],
-                      ["participantes", "Participantes", "Laura Méndez (gerente), Carlos…"],
-                    ] as const
-                  ).map(([k, etiqueta, ph]) => (
-                    <label key={k} className="text-sm">
-                      <span className="mb-1 block text-slate-600">{etiqueta}</span>
-                      <input
-                        value={contexto[k]}
-                        onChange={(e) => setContexto({ ...contexto, [k]: e.target.value })}
-                        placeholder={ph}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500"
-                      />
-                    </label>
-                  ))}
-                  <label className="text-sm sm:col-span-2">
-                    <span className="mb-1 block text-slate-600">Indicaciones para la minuta</span>
-                    <input
-                      value={contexto.notas}
-                      onChange={(e) => setContexto({ ...contexto, notas: e.target.value })}
-                      placeholder="Ej.: enfatizar los acuerdos de presupuesto; omitir la charla inicial"
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500"
-                    />
-                  </label>
-                </div>
-              )}
-
-              {ocupado ? (
-                <Progreso etapa={etapa} fuente={fuente} progreso={progreso} segundos={segundos} />
-              ) : (
-                <button
-                  onClick={procesar}
-                  className="mt-6 w-full rounded-xl bg-indigo-700 py-3 font-semibold text-white shadow-sm transition hover:bg-indigo-800 disabled:opacity-50"
-                  disabled={fuente === "archivo" ? !archivo : !texto.trim()}
-                >
-                  Generar minuta
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {minuta && (
-          <div>
-            {demo && (
-              <div className="no-print mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900">
-                Modo demostración: esta es una minuta de ejemplo fija (REUX_LLM=demo). Configura Bedrock o la API de Anthropic para resultados reales.
-              </div>
-            )}
-
-            <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
-              <nav className="inline-flex rounded-lg bg-white p-1 text-sm font-medium shadow-sm ring-1 ring-slate-200">
+            <section>
+              <Encabezado n={2} titulo="Datos de la reunión" nota="Opcional" />
+              <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
                 {(
                   [
-                    ["minuta", "Minuta"],
-                    ["diagrama", "Mapa mental e infografía"],
-                    ["transcripcion", "Transcripción"],
+                    ["titulo", "Título", "Comité de proyecto", 2],
+                    ["fecha", "Fecha", "9 oct 2026", 1],
+                    ["lugar", "Lugar", "Sala B / Zoom", 1],
+                    ["participantes", "Participantes", "Nombre (cargo), …", 2],
+                    ["notas", "Indicaciones", "Ej.: enfatizar acuerdos de presupuesto", 2],
                   ] as const
-                ).map(([id, nombre]) => (
-                  <button
-                    key={id}
-                    onClick={() => setPestana(id)}
-                    className={`rounded-md px-3 py-1.5 sm:px-4 ${pestana === id ? "bg-indigo-700 text-white" : "text-slate-600 hover:text-slate-900"}`}
-                  >
-                    {nombre}
-                  </button>
+                ).map(([k, etiqueta, ph, span]) => (
+                  <label key={k} className={span === 2 ? "col-span-2" : ""}>
+                    <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-tenue">{etiqueta}</span>
+                    <input
+                      value={contexto[k]}
+                      onChange={(e) => setContexto({ ...contexto, [k]: e.target.value })}
+                      placeholder={ph}
+                      disabled={ocupado}
+                      className={campo}
+                    />
+                  </label>
                 ))}
-              </nav>
-
-              {pestana === "minuta" && (
-                <div className="flex flex-wrap gap-2 text-sm">
-                  <Boton onClick={exportarWord} titulo="Incluye el último mapa, infografía o diagrama que hayas generado">Word</Boton>
-                  <Boton onClick={() => window.print()}>PDF / Imprimir</Boton>
-                  <Boton onClick={() => descargar(new Blob([minutaMarkdown(minuta)], { type: "text/markdown" }), nombreArchivo(minuta, "md"))}>
-                    Markdown
-                  </Boton>
-                  <Boton
-                    onClick={() => navigator.clipboard.writeText(minutaMarkdown(minuta)).then(() => setAviso("Minuta copiada"))}
-                  >
-                    Copiar
-                  </Boton>
-                </div>
-              )}
-            </div>
-
-            {etapa === "redactando" && <Progreso etapa={etapa} fuente="texto" progreso={0} segundos={segundos} />}
-
-            {pestana === "minuta" && (
-              <div className="overflow-hidden rounded-2xl shadow-sm ring-1 ring-slate-200 print:shadow-none print:ring-0">
-                <MinutaVista m={minuta} />
               </div>
-            )}
+            </section>
 
-            {/* Se mantiene montado (fuera de pantalla, no con display:none) para no perder lo
-                generado al cambiar de pestaña y poder exportarlo al Word desde la minuta. */}
-            <div
-              className={pestana === "diagrama" ? "no-print" : "no-print pointer-events-none fixed -left-[10000px] top-0 w-[1100px]"}
-              aria-hidden={pestana !== "diagrama"}
-              inert={pestana !== "diagrama"}
-            >
-              <Visuales key={version} minuta={minuta} activo={pestana === "diagrama"} onImagen={alImagen} onError={setError} />
-            </div>
+            {ocupado && <Progreso etapa={etapa} fuente={fuente} progreso={progreso} segundos={segundos} />}
 
-            {pestana === "transcripcion" && (
-              <div className="no-print rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
-                <p className="mb-3 text-sm text-slate-600">
-                  Puedes corregir la transcripción (por ejemplo, cambiar “Hablante 1” por el nombre real) y volver a generar la minuta.
-                </p>
-                <textarea
-                  value={transcripcion}
-                  onChange={(e) => setTranscripcion(e.target.value)}
-                  rows={20}
-                  className="w-full resize-y rounded-xl border border-slate-300 p-4 text-sm leading-relaxed outline-none focus:border-indigo-500"
-                />
-                <div className="mt-3 flex flex-wrap gap-2 text-sm">
-                  <Boton onClick={regenerar} disabled={ocupado || !transcripcion.trim()} principal>
-                    Regenerar minuta
-                  </Boton>
-                  <Boton onClick={() => descargar(new Blob([transcripcion], { type: "text/plain" }), nombreArchivo(minuta, "txt").replace(".txt", "-transcripcion.txt"))}>
-                    Descargar .txt
-                  </Boton>
-                </div>
+            {error && (
+              <div role="alert" className="flex items-start gap-2 border border-peligro/30 bg-peligro/5 px-3 py-2.5 text-[13px] text-peligro">
+                <CircleAlert size={16} className="mt-0.5 shrink-0" />
+                <span className="flex-1">{error}</span>
+                <button onClick={() => setError(null)} aria-label="Cerrar" className="shrink-0 hover:opacity-70">
+                  <X size={15} />
+                </button>
               </div>
             )}
           </div>
-        )}
-      </main>
+
+          <div className="sticky bottom-0 space-y-1.5 border-t border-borde bg-white px-5 py-4">
+            <button
+              onClick={procesar}
+              disabled={ocupado || !puedeGenerar}
+              className="inline-flex w-full items-center justify-center gap-2 bg-marca py-2.5 text-[14px] font-semibold text-white transition hover:bg-marca-hover disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {ocupado ? <LoaderCircle size={16} className="animate-spin" /> : <FileText size={16} />}
+              {ocupado ? "Procesando…" : minuta ? "Generar nueva minuta" : "Generar minuta"}
+            </button>
+            {minuta && !ocupado && (
+              <button onClick={nuevaReunion} className="w-full py-1 text-[12.5px] font-medium text-tenue hover:text-marca">
+                Limpiar y empezar otra reunión
+              </button>
+            )}
+          </div>
+        </aside>
+
+        {/* Área de trabajo */}
+        <main className="flex min-h-[70vh] flex-col lg:min-h-0">
+          <div className="no-print flex shrink-0 flex-wrap items-end justify-between gap-x-6 border-b border-borde bg-white px-5">
+            <nav className="flex gap-6 text-[13.5px] font-medium" role="tablist">
+              {(
+                [
+                  ["minuta", "Minuta", ScrollText],
+                  ["diagrama", "Visuales", Network],
+                  ["transcripcion", "Transcripción", FileText],
+                ] as const
+              ).map(([id, nombre, Icono]) => (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={pestana === id}
+                  disabled={!minuta}
+                  onClick={() => setPestana(id)}
+                  className={`-mb-px inline-flex items-center gap-2 border-b-2 py-3.5 transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                    pestana === id && minuta ? "border-marca text-marca" : "border-transparent text-tenue hover:text-tinta"
+                  }`}
+                >
+                  <Icono size={15} /> {nombre}
+                </button>
+              ))}
+            </nav>
+
+            {minuta && pestana === "minuta" && (
+              <div className="flex flex-wrap gap-1.5 py-2 text-[12.5px]">
+                <Boton onClick={exportarWord} icono={FileDown} titulo="Incluye el último visual generado">Word</Boton>
+                <Boton onClick={() => window.print()} icono={Printer}>PDF</Boton>
+                <Boton
+                  onClick={() => descargar(new Blob([minutaMarkdown(minuta)], { type: "text/markdown" }), nombreArchivo(minuta, "md"))}
+                  icono={Download}
+                >
+                  Markdown
+                </Boton>
+                <Boton onClick={() => navigator.clipboard.writeText(minutaMarkdown(minuta)).then(() => setAviso("Minuta copiada al portapapeles"))} icono={Copy}>
+                  Copiar
+                </Boton>
+              </div>
+            )}
+          </div>
+
+          <div className="relative min-h-0 flex-1">
+            {!minuta ? (
+              <Bienvenida />
+            ) : (
+              <>
+                {pestana === "minuta" && (
+                  <div className="imprimible panel-scroll absolute inset-0 overflow-y-auto p-5 lg:p-6">
+                    <MinutaVista m={minuta} />
+                  </div>
+                )}
+
+                {/* Se mantiene montado (fuera de pantalla, no con display:none) para no perder lo
+                    generado al cambiar de pestaña y poder exportarlo al Word desde la minuta. */}
+                <div
+                  className={pestana === "diagrama" ? "no-print absolute inset-0" : "no-print pointer-events-none fixed -left-[10000px] top-0 h-[900px] w-[1200px]"}
+                  aria-hidden={pestana !== "diagrama"}
+                  inert={pestana !== "diagrama"}
+                >
+                  <Visuales key={version} minuta={minuta} activo={pestana === "diagrama"} onImagen={alImagen} onError={setError} />
+                </div>
+
+                {pestana === "transcripcion" && (
+                  <div className="no-print absolute inset-0 flex flex-col p-5 lg:p-6">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-[13px] text-tenue">
+                        Corrija nombres o cifras (por ejemplo, reemplace “Hablante 1” por el nombre real) y regenere la minuta.
+                      </p>
+                      <div className="flex gap-1.5 text-[12.5px]">
+                        <Boton onClick={regenerar} disabled={ocupado || !transcripcion.trim()} icono={RefreshCw} principal>
+                          Regenerar minuta
+                        </Boton>
+                        <Boton
+                          onClick={() =>
+                            descargar(new Blob([transcripcion], { type: "text/plain" }), nombreArchivo(minuta, "txt").replace(".txt", "-transcripcion.txt"))
+                          }
+                          icono={Download}
+                        >
+                          Descargar .txt
+                        </Boton>
+                      </div>
+                    </div>
+                    <textarea
+                      value={transcripcion}
+                      onChange={(e) => setTranscripcion(e.target.value)}
+                      className="panel-scroll min-h-[300px] w-full flex-1 resize-none border border-borde bg-white p-5 font-serif text-[15px] leading-relaxed text-tinta outline-none focus:border-marca"
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </main>
+      </div>
 
       {aviso && (
-        <div className="no-print fixed bottom-6 left-1/2 -translate-x-1/2 rounded-lg bg-slate-900 px-4 py-2 text-sm text-white shadow-lg">
-          {aviso}
+        <div className="no-print fixed bottom-6 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 bg-marca px-4 py-2 text-[13px] text-white shadow-lg">
+          <Check size={15} /> {aviso}
         </div>
       )}
+    </div>
+  );
+}
 
-      <footer className="no-print py-8 text-center text-xs text-slate-500">
-        Reu-X · Amazon Transcribe + Claude en Amazon Bedrock · Los archivos se eliminan automáticamente del almacenamiento.
-      </footer>
+function Encabezado({ n, titulo, nota }: { n: number; titulo: string; nota?: string }) {
+  return (
+    <div className="flex items-baseline justify-between border-b border-linea pb-1.5">
+      <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-marca">
+        <span className="mr-1.5 font-serif text-acento">{n}.</span>
+        {titulo}
+      </h2>
+      {nota && <span className="text-[11.5px] text-tenue">{nota}</span>}
     </div>
   );
 }
 
 function Boton({
-  children, onClick, disabled, principal, titulo,
+  children, onClick, disabled, principal, titulo, icono: Icono,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
   principal?: boolean;
   titulo?: string;
+  icono?: React.ComponentType<{ size?: number }>;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       title={titulo}
-      className={`rounded-lg px-3 py-1.5 font-medium shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${
-        principal ? "bg-indigo-700 text-white hover:bg-indigo-800" : "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+      className={`inline-flex items-center gap-1.5 border px-2.5 py-1.5 font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
+        principal ? "border-marca bg-marca text-white hover:bg-marca-hover" : "border-borde bg-white text-tinta hover:border-marca hover:text-marca"
       }`}
     >
+      {Icono && <Icono size={14} />}
       {children}
     </button>
+  );
+}
+
+function Bienvenida() {
+  const pasos = [
+    { icono: Upload, titulo: "Cargue la reunión", texto: "Grabación de audio o video, o el texto de la transcripción o las notas." },
+    { icono: Mic, titulo: "Transcripción y análisis", texto: "Se identifican los participantes, los temas, los acuerdos y las tareas." },
+    { icono: ScrollText, titulo: "Revise y comparta", texto: "Minuta formal en Word o PDF, mapa mental, infografía y diagramas." },
+  ];
+  return (
+    <div className="flex h-full items-center justify-center p-8">
+      <div className="max-w-3xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-acento">Reu-X</p>
+        <h2 className="mt-2 font-serif text-[32px] font-semibold leading-tight text-marca">De la reunión al acta, en minutos.</h2>
+        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-tenue">
+          Cargue la grabación o la transcripción en el panel de la izquierda. Reu-X redacta una minuta formal y genera los
+          materiales para compartirla.
+        </p>
+        <ol className="mt-8 grid gap-px border border-borde bg-borde sm:grid-cols-3">
+          {pasos.map((p, i) => (
+            <li key={i} className="bg-white p-5">
+              <div className="flex items-center justify-between">
+                <p.icono size={20} className="text-marca" />
+                <span className="font-serif text-[13px] text-acento">0{i + 1}</span>
+              </div>
+              <p className="mt-3 text-[14px] font-semibold text-tinta">{p.titulo}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-tenue">{p.texto}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
   );
 }
 
@@ -501,36 +553,43 @@ function Progreso({ etapa, fuente, progreso, segundos }: { etapa: Etapa | null; 
   const pasos: { id: Etapa; nombre: string }[] =
     fuente === "archivo"
       ? [
-          { id: "subiendo", nombre: "Subiendo archivo" },
-          { id: "transcribiendo", nombre: "Transcribiendo con Amazon Transcribe" },
-          { id: "redactando", nombre: "Redactando la minuta" },
+          { id: "subiendo", nombre: "Carga del archivo" },
+          { id: "transcribiendo", nombre: "Transcripción" },
+          { id: "redactando", nombre: "Redacción de la minuta" },
         ]
-      : [{ id: "redactando", nombre: "Redactando la minuta" }];
+      : [{ id: "redactando", nombre: "Redacción de la minuta" }];
   const actual = pasos.findIndex((p) => p.id === etapa);
 
   return (
-    <div className="no-print mt-6 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200" aria-live="polite">
-      <ol className="space-y-2.5 text-sm">
+    <section aria-live="polite">
+      <Encabezado n={3} titulo="Procesamiento" />
+      <ol className="mt-3 space-y-2.5 text-[13px]">
         {pasos.map((p, i) => (
-          <li key={p.id} className="flex items-center gap-3">
-            <span
-              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
-                i < actual ? "bg-emerald-500 text-white" : i === actual ? "animate-pulse bg-indigo-600 text-white" : "bg-slate-200 text-slate-500"
-              }`}
-            >
-              {i < actual ? "✓" : i + 1}
-            </span>
-            <span className={i === actual ? "font-semibold text-slate-900" : "text-slate-500"}>
-              {p.nombre}
-              {i === actual && p.id === "subiendo" && ` · ${Math.round(progreso * 100)} %`}
-              {i === actual && p.id !== "subiendo" && ` · ${duracion(segundos)}`}
-            </span>
+          <li key={p.id} className="flex items-center gap-2.5">
+            {i < actual ? (
+              <CircleCheck size={17} className="text-exito" />
+            ) : i === actual ? (
+              <LoaderCircle size={17} className="animate-spin text-marca" />
+            ) : (
+              <Circle size={17} className="text-borde" />
+            )}
+            <span className={i === actual ? "font-medium text-tinta" : "text-tenue"}>{p.nombre}</span>
+            {i === actual && (
+              <span className="ml-auto tabular-nums text-tenue">
+                {p.id === "subiendo" ? `${Math.round(progreso * 100)} %` : duracion(segundos)}
+              </span>
+            )}
           </li>
         ))}
       </ol>
-      {etapa === "transcribiendo" && (
-        <p className="mt-3 text-xs text-slate-500">La transcripción suele tardar entre la cuarta parte y la mitad de la duración de la grabación.</p>
+      {etapa === "subiendo" && (
+        <div className="mt-2 h-1 bg-linea">
+          <div className="h-full bg-marca transition-all" style={{ width: `${Math.round(progreso * 100)}%` }} />
+        </div>
       )}
-    </div>
+      {etapa === "transcribiendo" && (
+        <p className="mt-2.5 text-[12px] leading-relaxed text-tenue">Suele tardar entre la cuarta parte y la mitad de la duración de la grabación.</p>
+      )}
+    </section>
   );
 }

@@ -170,10 +170,7 @@ export function MapaMental({ mapa, onSvg }: { mapa: Mapa; onSvg: (svg: string | 
       viewBox={`${minX} ${minY} ${ancho} ${alto}`}
       width={Math.round(ancho)}
       height={Math.round(alto)}
-      className="mx-auto h-auto max-w-full"
-      // En pantallas angostas se desplaza en vez de achicar el texto hasta volverlo ilegible.
-      style={{ minWidth: Math.min(Math.round(ancho), 760) }}
-    >
+      className="h-full w-full">
       <defs>
         <linearGradient id="reux-centro" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#1e3a8a" />

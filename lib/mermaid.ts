@@ -28,8 +28,8 @@ export function diagramaFlujo(f: Flujo): string {
     if (n.tipo === "inicio" || n.tipo === "fin") l.push(`  class ${idSeguro(n.id)} extremo`);
     if (n.tipo === "decision") l.push(`  class ${idSeguro(n.id)} decision`);
   }
-  l.push("  classDef extremo fill:#1e3a8a,stroke:#1e3a8a,color:#ffffff");
-  l.push("  classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f");
+  l.push("  classDef extremo fill:#1b2a41,stroke:#1b2a41,color:#ffffff");
+  l.push("  classDef decision fill:#f6efe4,stroke:#9a7b4f,color:#5c4526");
   return l.join("\n");
 }
 
@@ -47,14 +47,14 @@ export function diagramaTareas(m: Minuta): string {
   let j = 0;
   for (const [responsable, tareas] of porResponsable) {
     const rid = `r${i++}`;
-    l.push(`  ${rid}["👤 ${cita(responsable, 40)}"]`, `  raiz --> ${rid}`, `  class ${rid} persona`);
+    l.push(`  ${rid}["${cita(responsable, 40)}"]`, `  raiz --> ${rid}`, `  class ${rid} persona`);
     for (const t of tareas) {
       const tid = `t${j++}`;
-      const fecha = t.fecha_limite ? `<br/>📅 ${cita(t.fecha_limite, 30)}` : "";
+      const fecha = t.fecha_limite ? `<br/>Fecha: ${cita(t.fecha_limite, 30)}` : "";
       l.push(`  ${tid}["${cita(t.tarea, 70)}${fecha}"]`, `  ${rid} --> ${tid}`);
     }
   }
-  l.push("  classDef persona fill:#e0e7ff,stroke:#4338ca,color:#1e1b4b");
-  l.push("  class raiz raizc", "  classDef raizc fill:#1e3a8a,stroke:#1e3a8a,color:#ffffff");
+  l.push("  classDef persona fill:#e8ecf2,stroke:#1b2a41,color:#1b2a41");
+  l.push("  class raiz raizc", "  classDef raizc fill:#1b2a41,stroke:#1b2a41,color:#ffffff");
   return l.join("\n");
 }

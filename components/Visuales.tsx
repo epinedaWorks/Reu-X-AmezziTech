@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ImagePlus, X } from "lucide-react";
+import {
+  Download, ImagePlus, LayoutTemplate, ListChecks, LoaderCircle, Network, RefreshCw, Workflow, X, type LucideIcon,
+} from "lucide-react";
 import { Diagrama } from "./Diagrama";
 import { Infografia, TEMAS } from "./Infografia";
 import { MapaMental } from "./MapaMental";
@@ -12,11 +14,11 @@ import { diagramaFlujo, diagramaTareas } from "@/lib/mermaid";
 export type Imagen = { png: Uint8Array; ancho: number; alto: number };
 type Tipo = "mapa" | "infografia" | "flujo" | "tareas";
 
-const TIPOS: { id: Tipo; nombre: string; descripcion: string }[] = [
-  { id: "mapa", nombre: "Mapa mental", descripcion: "Ideas clave en ramas de colores (IA)" },
-  { id: "infografia", nombre: "Infografía", descripcion: "Resumen visual para compartir (IA)" },
-  { id: "flujo", nombre: "Diagrama de flujo", descripcion: "Proceso y decisiones (IA)" },
-  { id: "tareas", nombre: "Responsables y tareas", descripcion: "Quién hace qué y para cuándo" },
+const TIPOS: { id: Tipo; nombre: string; descripcion: string; icono: LucideIcon }[] = [
+  { id: "mapa", nombre: "Mapa mental", descripcion: "Ideas clave organizadas en ramas", icono: Network },
+  { id: "infografia", nombre: "Infografía", descripcion: "Resumen visual para compartir", icono: LayoutTemplate },
+  { id: "flujo", nombre: "Flujo", descripcion: "Proceso y decisiones de la reunión", icono: Workflow },
+  { id: "tareas", nombre: "Responsables", descripcion: "Quién hace qué y para cuándo", icono: ListChecks },
 ];
 
 type Generados = { mapa?: Mapa; infografia?: DatosInfografia; flujo?: Flujo };
@@ -28,27 +30,42 @@ function leerImagen(f: File | undefined, set: (url: string) => void) {
   r.readAsDataURL(f);
 }
 
-// Escala la infografía (900 px de ancho) al espacio disponible sin afectar la exportación.
-function Escalado({ children }: { children: React.ReactNode }) {
+// Escala la infografía (900 px de ancho) para que quepa completa en el área
+// visible, sin barras de desplazamiento y sin afectar la exportación.
+function Ajustado({ children, completa }: { children: React.ReactNode; completa: boolean }) {
   const caja = useRef<HTMLDivElement>(null);
-  const [escala, setEscala] = useState(1);
-  const [alto, setAlto] = useState<number>();
+  const interno = useRef<HTMLDivElement>(null);
+  const [medida, setMedida] = useState({ escala: 1, alto: 0 });
   useEffect(() => {
     const el = caja.current;
-    if (!el) return;
-    const obs = new ResizeObserver(() => {
-      const interno = el.firstElementChild as HTMLElement | null;
-      const e = Math.min(1, el.clientWidth / 900);
-      setEscala(e);
-      if (interno) setAlto(interno.offsetHeight * e);
-    });
+    const hijo = interno.current;
+    if (!el || !hijo) return;
+    const medir = () => {
+      const alto = hijo.offsetHeight;
+      const porAncho = (el.clientWidth - 32) / 900;
+      const escala = Math.min(1, porAncho, completa ? (el.clientHeight - 32) / Math.max(alto, 1) : Infinity);
+      setMedida({ escala: Math.max(escala, 0.1), alto });
+    };
+    // Primera medición inmediata (diferida fuera del efecto); luego, en cada cambio de tamaño.
+    queueMicrotask(medir);
+    const obs = new ResizeObserver(medir);
     obs.observe(el);
-    if (el.firstElementChild) obs.observe(el.firstElementChild);
+    obs.observe(hijo);
     return () => obs.disconnect();
-  }, []);
+  }, [completa]);
   return (
-    <div ref={caja} className="mx-auto max-w-[900px] overflow-hidden" style={{ height: alto }}>
-      <div style={{ transform: `scale(${escala})`, transformOrigin: "top left", width: 900 }}>{children}</div>
+    <div
+      ref={caja}
+      className={`panel-scroll absolute inset-0 grid justify-items-center p-4 ${completa ? "place-items-center overflow-hidden" : "items-start overflow-y-auto"}`}
+    >
+      <div
+        className="overflow-hidden shadow-[0_2px_12px_rgba(16,24,40,0.12)]"
+        style={{ width: 900 * medida.escala, height: medida.alto * medida.escala }}
+      >
+        <div ref={interno} style={{ transform: `scale(${medida.escala})`, transformOrigin: "top left", width: 900 }}>
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
@@ -70,6 +87,7 @@ export function Visuales({
   const [svg, setSvg] = useState<string | null>(null);
   const [codigoEditado, setCodigoEditado] = useState<string | null>(null);
   const [tema, setTema] = useState("azul");
+  const [completa, setCompleta] = useState(true);
   const [foto, setFoto] = useState<string | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
   const infografia = useRef<HTMLDivElement>(null);
@@ -161,34 +179,59 @@ export function Visuales({
     descargar(new Blob([svg], { type: "image/svg+xml" }), nombreArchivo(minuta, "svg").replace(".svg", `-${tipo}.svg`));
   }
 
-  const btn = "rounded-lg bg-white px-3 py-1.5 font-medium text-slate-700 shadow-sm ring-1 ring-slate-300 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50";
+  const accion =
+    "inline-flex items-center gap-1.5 border border-borde bg-white px-2.5 py-1.5 font-medium text-tinta transition hover:border-marca hover:text-marca disabled:cursor-not-allowed disabled:opacity-40";
+  const mensajeCarga =
+    tipo === "infografia" ? "Diseñando la infografía…" : tipo === "mapa" ? "Organizando las ideas del mapa mental…" : "Diseñando el diagrama de flujo…";
 
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {TIPOS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => elegir(t.id)}
-            className={`rounded-xl border p-4 text-left transition ${tipo === t.id ? "border-indigo-600 bg-indigo-50 ring-2 ring-indigo-100" : "border-slate-200 hover:border-indigo-300"}`}
-          >
-            <p className="font-semibold text-slate-900">{t.nombre}</p>
-            <p className="mt-0.5 text-xs text-slate-500">{t.descripcion}</p>
-          </button>
-        ))}
+    <div className="flex h-full flex-col">
+      {/* Selector de visual y acciones */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-borde bg-fondo px-5 py-2.5">
+        <div className="flex flex-wrap border border-borde bg-white text-[13px] font-medium">
+          {TIPOS.map((t, i) => (
+            <button
+              key={t.id}
+              onClick={() => elegir(t.id)}
+              title={t.descripcion}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 transition ${i > 0 ? "border-l border-borde" : ""} ${
+                tipo === t.id ? "bg-marca text-white" : "text-tenue hover:bg-fondo hover:text-tinta"
+              }`}
+            >
+              <t.icono size={14} /> {t.nombre}
+            </button>
+          ))}
+        </div>
+        {listo && cargando !== tipo && (
+          <div className="flex flex-wrap gap-1.5 text-[12.5px]">
+            <button onClick={descargarPng} className={accion}>
+              <Download size={14} /> PNG
+            </button>
+            {tipo !== "infografia" && (
+              <button onClick={descargarSvg} className={accion}>
+                <Download size={14} /> SVG
+              </button>
+            )}
+            {tipo !== "tareas" && (
+              <button onClick={() => generar(tipo, true)} className={accion}>
+                <RefreshCw size={14} /> Regenerar
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {tipo === "infografia" && generados.infografia && (
-        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl bg-slate-50 px-4 py-3 text-sm">
+      {tipo === "infografia" && generados.infografia && cargando !== tipo && (
+        <div className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2 border-b border-borde bg-white px-5 py-2 text-[12.5px]">
           <div className="flex items-center gap-2">
-            <span className="text-slate-600">Tema:</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-tenue">Tema</span>
             {Object.entries(TEMAS).map(([id, t]) => (
               <button
                 key={id}
                 title={t.nombre}
                 aria-label={`Tema ${t.nombre}`}
                 onClick={() => setTema(id)}
-                className={`h-7 w-7 rounded-full ring-offset-2 transition ${tema === id ? "ring-2 ring-slate-900" : ""}`}
+                className={`h-5 w-5 ring-offset-2 transition ${tema === id ? "ring-2 ring-marca" : ""}`}
                 style={{ background: `linear-gradient(135deg, ${t.primario} 50%, ${t.destaque} 50%)` }}
               />
             ))}
@@ -199,77 +242,81 @@ export function Visuales({
               ["Logo", logo, setLogo],
             ] as const
           ).map(([nombre, valor, set]) => (
-            <div key={nombre} className="flex items-center gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-1.5 font-medium text-indigo-700 hover:underline">
-                <ImagePlus size={16} /> {valor ? `Cambiar ${nombre.toLowerCase()}` : `Agregar ${nombre.toLowerCase()}`}
+            <div key={nombre} className="flex items-center gap-1.5">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 font-medium text-marca hover:underline">
+                <ImagePlus size={14} /> {valor ? `Cambiar ${nombre.toLowerCase()}` : `Agregar ${nombre.toLowerCase()}`}
                 <input type="file" accept="image/*" hidden onChange={(e) => leerImagen(e.target.files?.[0], set)} />
               </label>
               {valor && (
-                <button onClick={() => set(null)} aria-label={`Quitar ${nombre.toLowerCase()}`} className="text-slate-500 hover:text-red-600">
-                  <X size={16} />
+                <button onClick={() => set(null)} aria-label={`Quitar ${nombre.toLowerCase()}`} className="text-tenue hover:text-peligro">
+                  <X size={14} />
                 </button>
               )}
             </div>
           ))}
-          <span className="text-xs text-slate-500">Haz clic en cualquier texto de la infografía para editarlo.</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-tenue">Vista</span>
+            <div className="flex border border-borde">
+              {([[true, "Completa"], [false, "Ancho"]] as const).map(([v, nombre], i) => (
+                <button
+                  key={nombre}
+                  onClick={() => setCompleta(v)}
+                  className={`px-2 py-0.5 ${i > 0 ? "border-l border-borde" : ""} ${completa === v ? "bg-marca text-white" : "text-tenue hover:text-tinta"}`}
+                >
+                  {nombre}
+                </button>
+              ))}
+            </div>
+          </div>
+          <span className="text-tenue">Haga clic en cualquier texto para editarlo.</span>
         </div>
       )}
 
-      <div className="mt-5 min-h-[320px] overflow-hidden rounded-xl border border-slate-200 bg-white">
+      {/* Lienzo: cada visual se ajusta al espacio disponible */}
+      <div className="relative min-h-[420px] flex-1 bg-[#eef0f3]">
         {cargando === tipo ? (
-          <div className="py-28 text-center text-sm text-slate-500">
-            {tipo === "infografia" ? "Diseñando la infografía…" : tipo === "mapa" ? "Organizando las ideas del mapa mental…" : "Diseñando el diagrama de flujo…"}
+          <div className="absolute inset-0 grid place-items-center text-[13px] text-tenue">
+            <span className="inline-flex items-center gap-2">
+              <LoaderCircle size={16} className="animate-spin" /> {mensajeCarga}
+            </span>
           </div>
         ) : tipo === "mapa" && generados.mapa ? (
-          <div className="overflow-x-auto p-4">
+          <div className="absolute inset-4 grid place-items-center border border-borde bg-white p-3">
             <MapaMental mapa={generados.mapa} onSvg={alSvg} />
           </div>
         ) : tipo === "infografia" && generados.infografia ? (
-          <div className="bg-slate-100 p-4">
-            <Escalado>
-              <Infografia ref={infografia} datos={generados.infografia} minuta={minuta} tema={TEMAS[tema]} foto={foto} logo={logo} />
-            </Escalado>
-          </div>
+          <Ajustado completa={completa}>
+            <Infografia ref={infografia} datos={generados.infografia} minuta={minuta} tema={TEMAS[tema]} foto={foto} logo={logo} />
+          </Ajustado>
         ) : codigo ? (
-          <Diagrama codigo={codigo} onSvg={alSvg} />
+          <div className="absolute inset-4 flex flex-col border border-borde bg-white">
+            <div className="relative min-h-0 flex-1">
+              <Diagrama codigo={codigo} onSvg={alSvg} />
+            </div>
+            <details className="shrink-0 border-t border-borde px-4 py-2 text-[12.5px]">
+              <summary className="cursor-pointer text-tenue">Editar código del diagrama (Mermaid)</summary>
+              <textarea
+                value={codigo}
+                onChange={(e) => setCodigoEditado(e.target.value)}
+                rows={8}
+                spellCheck={false}
+                className="panel-scroll mt-2 w-full border border-borde bg-fondo p-2.5 font-mono text-xs"
+              />
+              {codigoEditado !== null && (
+                <button onClick={() => setCodigoEditado(null)} className="text-marca hover:underline">
+                  Restaurar original
+                </button>
+              )}
+            </details>
+          </div>
         ) : (
-          <div className="py-28 text-center text-sm">
-            <button onClick={() => generar(tipo, true)} className="font-medium text-indigo-700 hover:underline">
+          <div className="absolute inset-0 grid place-items-center text-[13px]">
+            <button onClick={() => generar(tipo, true)} className={accion}>
               Generar {TIPOS.find((t) => t.id === tipo)?.nombre.toLowerCase()}
             </button>
           </div>
         )}
       </div>
-
-      {listo && cargando !== tipo && (
-        <div className="mt-4 flex flex-wrap gap-2 text-sm">
-          <button onClick={descargarPng} className={btn}>Descargar PNG</button>
-          {tipo !== "infografia" && (
-            <button onClick={descargarSvg} className={btn}>Descargar SVG</button>
-          )}
-          {tipo !== "tareas" && (
-            <button onClick={() => generar(tipo, true)} className={btn}>Regenerar con IA</button>
-          )}
-        </div>
-      )}
-
-      {(tipo === "flujo" || tipo === "tareas") && codigo && (
-        <details className="mt-4 text-sm">
-          <summary className="cursor-pointer text-slate-600">Editar código del diagrama (Mermaid)</summary>
-          <textarea
-            value={codigo}
-            onChange={(e) => setCodigoEditado(e.target.value)}
-            rows={12}
-            spellCheck={false}
-            className="mt-2 w-full rounded-lg border border-slate-300 bg-slate-50 p-3 font-mono text-xs"
-          />
-          {codigoEditado !== null && (
-            <button onClick={() => setCodigoEditado(null)} className="text-indigo-700 hover:underline">
-              Restaurar original
-            </button>
-          )}
-        </details>
-      )}
     </div>
   );
 }

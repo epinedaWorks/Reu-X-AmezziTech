@@ -16,9 +16,9 @@ async function renderizar(codigo: string): Promise<string> {
       securityLevel: "strict",
       fontFamily: "Arial, Helvetica, sans-serif",
       themeVariables: {
-        primaryColor: "#eef2ff",
-        primaryBorderColor: "#4f46e5",
-        primaryTextColor: "#1e1b4b",
+        primaryColor: "#eef1f6",
+        primaryBorderColor: "#1b2a41",
+        primaryTextColor: "#1f2733",
         lineColor: "#64748b",
         fontSize: "15px",
       },
@@ -53,18 +53,18 @@ export function Diagrama({ codigo, onSvg }: { codigo: string; onSvg: (svg: strin
 
   if (estado.error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+      <div className="m-4 border border-peligro/30 bg-peligro/5 p-4 text-sm text-peligro">
         No se pudo dibujar el diagrama. Revisa el código Mermaid.
         <pre className="mt-2 whitespace-pre-wrap text-xs opacity-80">{estado.error}</pre>
       </div>
     );
   }
   if (!estado.svg) {
-    return <div className="py-16 text-center text-sm text-slate-500">Dibujando diagrama…</div>;
+    return <div className="absolute inset-0 grid place-items-center text-sm text-tenue">Dibujando diagrama…</div>;
   }
   return (
     <div
-      className="diagrama overflow-x-auto rounded-lg bg-white p-4 [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:max-w-full"
+      className="diagrama absolute inset-0 p-4 [&_svg]:h-full [&_svg]:w-full [&_svg]:!max-w-full"
       dangerouslySetInnerHTML={{ __html: estado.svg }}
     />
   );
