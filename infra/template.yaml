@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Reu-X - bucket para archivos de reuniones y transcripciones (Amazon Transcribe) + politica IAM para la app.
+
+Parameters:
+  OrigenesPermitidos:
+    Type: CommaDelimitedList
+    Default: "http://localhost:3000"
+    Description: Origenes web que pueden subir archivos directo al bucket (CORS). Agrega el dominio de produccion separado por coma.
+  DiasRetencion:
+    Type: Number
+    Default: 7
+    Description: Dias que se conservan los archivos subidos y las transcripciones.
+
+Resources:
+  BucketReuniones:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "reu-x-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      CorsConfiguration:
+        CorsRules:
+          - AllowedMethods: [PUT]
+            AllowedOrigins: !Ref OrigenesPermitidos
+            AllowedHeaders: ["*"]
+            MaxAge: 3000
+      LifecycleConfiguration:
+        Rules:
+          - Id: BorrarArchivosViejos
+            Status: Enabled
+            ExpirationInDays: !Ref DiasRetencion
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+
+  PoliticaApp:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "reu-x-app-${AWS::Region}"
+      Description: Permisos minimos para la app web Reu-X.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: [s3:PutObject, s3:GetObject]
+            Resource: !Sub "${BucketReuniones.Arn}/*"
+          - Effect: Allow
+            Action: [transcribe:StartTranscriptionJob, transcribe:GetTranscriptionJob]
+            Resource: "*"
+          - Effect: Allow
+            Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
+            Resource: "*"
+
+Outputs:
+  Bucket:
+    Value: !Ref BucketReuniones
+  Politica:
+    Value: !Ref PoliticaApp

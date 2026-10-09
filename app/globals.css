@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Al imprimir (o guardar como PDF) solo sale la minuta. */
+@media print {
+  @page {
+    margin: 1.6cm;
+  }
+  body {
+    background: #ffffff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  #minuta {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
