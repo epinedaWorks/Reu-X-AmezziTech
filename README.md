@@ -59,8 +59,38 @@ Los archivos subidos se borran solos a los 7 días (regla de ciclo de vida del b
 
 Las credenciales AWS se toman de la cadena estándar: el perfil de `~/.aws` o las variables `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY`. En producción, usa un usuario o rol que solo tenga la política `reu-x-app-us-west-1` que crea la plantilla.
 
-## Estado de la cuenta AWS (9 de octubre de 2026)
+## Producción: https://reux.amezzi.tech
 
-- Amazon Transcribe y S3 funcionan en us-west-1.
-- **Bedrock está bloqueado:** `Operation not allowed` en us-west-1, y el aviso "model is not available for this account" en us-east-1. Hay que solicitar acceso al modelo en la consola de Bedrock o abrir un caso con AWS. Mientras tanto, usa `REUX_LLM=anthropic` o `REUX_LLM=demo`.
-- Lambda también está bloqueado en la cuenta. Por eso el backend corre en las rutas de Next.js y no en funciones Lambda.
+| Pieza | Detalle |
+|---|---|
+| Servidor | EC2 `t4g.small` en us-west-1 (stack `reu-x-servidor`, `infra/servidor.yaml`), IP elástica, sin SSH (se administra por SSM) |
+| HTTPS | Caddy con certificado automático de Let's Encrypt (`infra/servidor/Caddyfile`) |
+| Permisos | Rol IAM de la instancia: solo el bucket, Transcribe, Bedrock y `/reux/*` en Parameter Store |
+| Acceso | Usuario y contraseña en Parameter Store: `/reux/usuario`, `/reux/clave` (cifrada) y `/reux/secreto` (firma de sesiones) |
+| DNS | Registro `A` de `reux.amezzi.tech` hacia la IP elástica, en el panel del dominio |
+
+**Publicar una versión nueva** (después de hacer `git push` a `main`):
+
+```bash
+bash infra/publicar.sh
+```
+
+El servidor descarga el código de GitHub, lo compila y reinicia la app.
+
+**Ver o cambiar la contraseña:**
+
+```bash
+aws ssm get-parameter --profile reux --region us-west-1 --name /reux/clave --with-decryption --query Parameter.Value --output text
+```
+```bash
+aws ssm put-parameter --profile reux --region us-west-1 --name /reux/clave --type SecureString --overwrite --value "NuevaContraseña"
+```
+
+Después de cambiarla, ejecute `bash infra/publicar.sh` para que el servidor la cargue.
+
+En local, si `REUX_USUARIO`, `REUX_CLAVE` y `REUX_SECRETO` no están definidas, la app queda abierta sin pantalla de acceso.
+
+## Historial de la cuenta AWS
+
+- La primera cuenta (112604073803) tenía Bedrock y Lambda bloqueados; por eso se creó la cuenta 937509584902 (perfil `reux`).
+- En la cuenta nueva solo están habilitados Claude Sonnet 4.6 y Haiku 4.5 en Bedrock; los modelos 5.x se solicitan a AWS.
