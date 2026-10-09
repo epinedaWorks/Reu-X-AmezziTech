@@ -69,6 +69,16 @@ Las credenciales AWS se toman de la cadena estándar: el perfil de `~/.aws` o la
 | Acceso | Usuario y contraseña en Parameter Store: `/reux/usuario`, `/reux/clave` (cifrada) y `/reux/secreto` (firma de sesiones) |
 | DNS | Registro `A` de `reux.amezzi.tech` hacia la IP elástica, en el panel del dominio |
 
+**Usuarios y perfiles** (pantalla *Usuarios* en la barra superior, solo administradores):
+
+| Perfil | Permisos | Límites por defecto |
+|---|---|---|
+| Administrador | Todo, incluida la administración de usuarios | Sin límite |
+| Usuario | Minutas y visuales | Sin límite (configurable) |
+| Participante | Minutas y visuales; pensado para cuentas compartidas | 20 minutas por día y archivos de hasta 300 MB |
+
+Los usuarios se guardan en `config/usuarios.json` del bucket (cifrado, contraseñas con scrypt, escrituras con `If-Match`). El administrador principal (`/reux/usuario` y `/reux/clave` en Parameter Store) siempre puede entrar y no aparece en ese archivo. Los límites se cuentan por usuario y por día (hora de Guatemala), y desactivar un usuario corta su acceso a la API de inmediato.
+
 **Publicar una versión nueva** (después de hacer `git push` a `main`):
 
 ```bash

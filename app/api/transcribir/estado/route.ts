@@ -1,5 +1,6 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { GetTranscriptionJobCommand } from "@aws-sdk/client-transcribe";
+import { exigirSesion } from "@/lib/autorizacion";
 import { bucket, s3, transcribe, respuestaErrorAws } from "@/lib/aws";
 import { formatearTranscripcion, type SalidaTranscribe } from "@/lib/transcripcion";
 
@@ -14,6 +15,8 @@ export async function POST(req: Request) {
 }
 
 async function manejar(req: Request) {
+  const a = await exigirSesion();
+  if (!a.ok) return a.respuesta;
   const { trabajo } = (await req.json()) as { trabajo?: string };
   if (!trabajo || !/^reux-[\w-]+$/.test(trabajo)) {
     return Response.json({ error: "Trabajo inválido." }, { status: 400 });

@@ -1,11 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Check, ChevronDown, Circle, CircleAlert, CircleCheck, Copy, Download, FileCheck, FileDown, FileText, LoaderCircle, Mic,
-  LogOut, Network, Plus, Printer, RefreshCw, ScrollText, Server, Type, Upload, X,
+  Network, Plus, Printer, RefreshCw, ScrollText, Type, Upload, X,
 } from "lucide-react";
+import { BarraSuperior } from "./BarraSuperior";
 import { MinutaVista } from "./MinutaVista";
 import { Visuales, type Imagen } from "./Visuales";
 import { REUNION_EJEMPLO } from "@/lib/ejemplo";
@@ -219,19 +219,6 @@ export function ReuX() {
     }
   }
 
-  const router = useRouter();
-  // Hay sesión si existe la cookie visible que deja el inicio de sesión.
-  const conSesion = useSyncExternalStore(
-    () => () => {},
-    () => document.cookie.includes("reux_activa=1"),
-    () => false,
-  );
-
-  async function salir() {
-    await fetch("/api/acceso", { method: "DELETE" });
-    router.replace("/acceso");
-  }
-
   const ocupado = etapa !== null;
   const segundos = Math.max(0, Math.round((ahora - inicioEtapa) / 1000));
   const puedeGenerar = fuente === "archivo" ? Boolean(archivo) : Boolean(texto.trim());
@@ -252,33 +239,19 @@ export function ReuX() {
 
   return (
     <div className="flex h-dvh flex-col">
-      {/* Barra superior */}
-      <header className="no-print flex h-[68px] shrink-0 items-center justify-between gap-3 border-b border-borde bg-white px-4 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-          <div className="grid h-10 w-10 shrink-0 place-items-center bg-marca font-serif text-[19px] font-bold text-white">R</div>
-          <div className="min-w-0 leading-tight">
-            <p className="text-[20px] font-bold tracking-tight text-marca sm:text-[22px]">Reu-X</p>
-            <p className="hidden truncate text-[12.5px] text-tenue sm:block">Actas y minutas de reunión</p>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2.5 text-[12.5px] sm:gap-4">
-          {demo && <span className="border border-acento/40 bg-acento/10 px-2 py-0.5 font-medium text-acento">Demostración</span>}
-          <span className="hidden items-center gap-1.5 text-tenue xl:inline-flex">
-            <Server size={14} /> AWS · us-west-1
-          </span>
-          {minuta && !ocupado && (
-            <Boton onClick={nuevaReunion} icono={Plus} titulo="Nueva reunión">
-              <span className="hidden sm:inline">Nueva reunión</span>
-            </Boton>
-          )}
-          <Firma className="border-l border-borde pl-3 text-right sm:pl-4" />
-          {conSesion && (
-            <button onClick={salir} title="Cerrar sesión" aria-label="Cerrar sesión" className="text-tenue transition hover:text-marca">
-              <LogOut size={18} />
-            </button>
-          )}
-        </div>
-      </header>
+      <BarraSuperior
+        refrescar={version}
+        acciones={
+          <>
+            {demo && <span className="border border-acento/40 bg-acento/10 px-2 py-0.5 font-medium text-acento">Demostración</span>}
+            {minuta && !ocupado && (
+              <Boton onClick={nuevaReunion} icono={Plus} titulo="Nueva reunión">
+                <span className="hidden sm:inline">Nueva reunión</span>
+              </Boton>
+            )}
+          </>
+        }
+      />
 
       {!minuta ? (
         /* ───────── Carga y procesamiento: una sola pantalla, sin desplazamiento ───────── */
@@ -535,18 +508,6 @@ export function ReuX() {
           <Check size={15} /> {aviso}
         </div>
       )}
-    </div>
-  );
-}
-
-// Autoría del producto: Amezzi Tech.
-function Firma({ className = "" }: { className?: string }) {
-  return (
-    <div className={className}>
-      <p className="text-[15px] font-bold leading-tight tracking-tight text-marca sm:text-[17px]">
-        Amezzi <span className="text-acento">Tech</span>
-      </p>
-      <p className="text-[10.5px] leading-tight text-tenue sm:text-[12px]">by Ing. Erick J. Pineda Amézquita</p>
     </div>
   );
 }

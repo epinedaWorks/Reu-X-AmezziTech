@@ -1,7 +1,9 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { bucket, s3, respuestaErrorAws } from "@/lib/aws";
+import { exigirSesion } from "@/lib/autorizacion";
 import { EXTENSIONES_MEDIA, TAMANO_MAXIMO } from "@/lib/formatos";
+import { cuotaAgotada } from "@/lib/usuarios";
 
 // Devuelve una URL firmada para que el navegador suba el archivo directo a S3
 // (sin pasar el video por el servidor).
@@ -14,6 +16,12 @@ export async function POST(req: Request) {
 }
 
 async function manejar(req: Request) {
+  const a = await exigirSesion();
+  if (!a.ok) return a.respuesta;
+  const agotada = cuotaAgotada(a.datos.registro);
+  if (agotada) return Response.json({ error: agotada }, { status: 429 });
+  const maxMB = a.datos.registro?.maxMB ?? 0;
+
   const { nombre, tipo, tamano } = (await req.json()) as {
     nombre?: string;
     tipo?: string;
@@ -28,6 +36,9 @@ async function manejar(req: Request) {
   }
   if (!tamano || tamano > TAMANO_MAXIMO) {
     return Response.json({ error: "El archivo supera el máximo de 2 GB." }, { status: 400 });
+  }
+  if (maxMB > 0 && tamano > maxMB * 1024 * 1024) {
+    return Response.json({ error: `Su usuario permite archivos de hasta ${maxMB} MB.` }, { status: 400 });
   }
 
   const limpio = nombre

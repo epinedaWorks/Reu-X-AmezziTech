@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { exigirSesion } from "@/lib/autorizacion";
 import { FlujoSchema, InfografiaSchema, MapaSchema, type Minuta } from "@/lib/esquemas";
 import { FLUJO_EJEMPLO, INFOGRAFIA_EJEMPLO, MAPA_EJEMPLO } from "@/lib/ejemplo";
 import { ErrorLLM, generarEstructurado, proveedor } from "@/lib/llm";
@@ -56,6 +57,8 @@ ${COMUN}`,
 };
 
 export async function POST(req: Request) {
+  const a = await exigirSesion();
+  if (!a.ok) return a.respuesta;
   const { minuta, tipo } = (await req.json()) as { minuta?: Minuta; tipo?: string };
   const visual = tipo ? VISUALES[tipo] : undefined;
   if (!minuta || !visual) {

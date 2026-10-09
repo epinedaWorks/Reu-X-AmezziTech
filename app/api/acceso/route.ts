@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { COOKIE_ACTIVA, COOKIE_SESION, DURACION_SESION_S, accesoActivo, crearSesion, iguales } from "@/lib/sesion";
+import { COOKIE_ACTIVA, COOKIE_SESION, DURACION_SESION_S, accesoActivo, crearSesion, iguales, type Sesion } from "@/lib/sesion";
+import { obtener, verificarClave } from "@/lib/usuarios";
 
 // Límite simple de intentos por IP (en memoria del servidor).
 const INTENTOS_MAX = 8;
@@ -18,6 +19,16 @@ function registrarFallo(ip: string) {
   else r.n++;
 }
 
+// Administrador principal (Parameter Store) o usuario registrado en config/usuarios.json.
+async function autenticar(usuario: string, clave: string): Promise<Sesion | null> {
+  if (iguales(usuario, process.env.REUX_USUARIO ?? "") && iguales(clave, process.env.REUX_CLAVE ?? "")) {
+    return { usuario, rol: "admin", principal: true };
+  }
+  const u = await obtener(usuario);
+  if (u?.activo && verificarClave(clave, u.hash)) return { usuario, rol: u.rol, principal: false };
+  return null;
+}
+
 export async function POST(req: Request) {
   if (!accesoActivo()) return NextResponse.json({ ok: true });
 
@@ -26,9 +37,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Demasiados intentos. Espere 15 minutos e intente de nuevo." }, { status: 429 });
   }
 
-  const { usuario = "", clave = "" } = (await req.json().catch(() => ({}))) as { usuario?: string; clave?: string };
-  const ok = iguales(usuario.trim(), process.env.REUX_USUARIO ?? "") && iguales(clave, process.env.REUX_CLAVE ?? "");
-  if (!ok) {
+  const cuerpo = (await req.json().catch(() => ({}))) as { usuario?: string; clave?: string };
+  const usuario = (cuerpo.usuario ?? "").trim().toLowerCase();
+  const sesion = await autenticar(usuario, cuerpo.clave ?? "");
+  if (!sesion) {
     registrarFallo(ip);
     return NextResponse.json({ error: "Usuario o contraseña incorrectos." }, { status: 401 });
   }
@@ -36,14 +48,15 @@ export async function POST(req: Request) {
   intentos.delete(ip);
   const seguro = new URL(req.url).protocol === "https:" || req.headers.get("x-forwarded-proto") === "https";
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(COOKIE_SESION, await crearSesion(usuario.trim()), {
+  res.cookies.set(COOKIE_SESION, await crearSesion(sesion), {
     httpOnly: true,
     secure: seguro,
     sameSite: "lax",
     path: "/",
     maxAge: DURACION_SESION_S,
   });
-  res.cookies.set(COOKIE_ACTIVA, "1", { secure: seguro, sameSite: "lax", path: "/", maxAge: DURACION_SESION_S });
+  // Visible para el navegador solo para adaptar la interfaz (el servidor no confía en ella).
+  res.cookies.set(COOKIE_ACTIVA, sesion.rol, { secure: seguro, sameSite: "lax", path: "/", maxAge: DURACION_SESION_S });
   return res;
 }
 

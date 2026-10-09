@@ -1,4 +1,6 @@
+import { exigirSesion } from "@/lib/autorizacion";
 import { MinutaSchema } from "@/lib/esquemas";
+import { consumirCuota, cuotaAgotada } from "@/lib/usuarios";
 import { TEXTO_MAXIMO } from "@/lib/formatos";
 import { MINUTA_EJEMPLO } from "@/lib/ejemplo";
 import { ErrorLLM, generarEstructurado, proveedor } from "@/lib/llm";
@@ -19,6 +21,11 @@ Reglas:
 - Corrige errores evidentes de la transcripción automática (palabras mal reconocidas) cuando el contexto lo deje claro.`;
 
 export async function POST(req: Request) {
+  const a = await exigirSesion();
+  if (!a.ok) return a.respuesta;
+  const agotada = cuotaAgotada(a.datos.registro);
+  if (agotada) return Response.json({ error: agotada }, { status: 429 });
+
   const { texto, contexto } = (await req.json()) as {
     texto?: string;
     contexto?: { titulo?: string; fecha?: string; lugar?: string; participantes?: string; notas?: string };
@@ -48,6 +55,7 @@ export async function POST(req: Request) {
   }
   try {
     const minuta = await generarEstructurado({ system: SYSTEM, prompt, schema: MinutaSchema });
+    if (a.datos.registro) await consumirCuota(a.datos.registro.usuario);
     return Response.json({ minuta });
   } catch (e) {
     if (e instanceof ErrorLLM) return Response.json({ error: e.message }, { status: 502 });

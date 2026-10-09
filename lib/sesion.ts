@@ -40,16 +40,25 @@ export function iguales(a: string, b: string): boolean {
   return dif === 0;
 }
 
-export async function crearSesion(usuario: string): Promise<string> {
-  const datos = `${base64url(codificador.encode(usuario))}.${Math.floor(Date.now() / 1000) + DURACION_SESION_S}`;
+export type Sesion = { usuario: string; rol: "admin" | "usuario" | "participante"; principal: boolean };
+
+export async function crearSesion(s: Sesion): Promise<string> {
+  const datos = `${base64url(codificador.encode(JSON.stringify(s)))}.${Math.floor(Date.now() / 1000) + DURACION_SESION_S}`;
   return `${datos}.${await firmar(datos)}`;
 }
 
-export async function sesionValida(token: string | undefined): Promise<boolean> {
-  if (!token) return false;
+// Devuelve la sesión si la firma es válida y no venció.
+export async function leerSesion(token: string | undefined): Promise<Sesion | null> {
+  if (!token) return null;
   const partes = token.split(".");
-  if (partes.length !== 3) return false;
+  if (partes.length !== 3) return null;
   const datos = `${partes[0]}.${partes[1]}`;
-  if (!iguales(partes[2], await firmar(datos))) return false;
-  return Number(partes[1]) > Date.now() / 1000;
+  if (!iguales(partes[2], await firmar(datos))) return null;
+  if (Number(partes[1]) <= Date.now() / 1000) return null;
+  try {
+    const b = atob(partes[0].replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(new TextDecoder().decode(Uint8Array.from(b, (c) => c.charCodeAt(0)))) as Sesion;
+  } catch {
+    return null;
+  }
 }

@@ -32,12 +32,18 @@ Resources:
             AllowedHeaders: ["*"]
             MaxAge: 3000
       LifecycleConfiguration:
+        # Solo se borran las grabaciones y transcripciones; config/ (usuarios) se conserva.
         Rules:
-          - Id: BorrarArchivosViejos
+          - Id: BorrarEntradas
             Status: Enabled
+            Prefix: entradas/
             ExpirationInDays: !Ref DiasRetencion
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 1
+          - Id: BorrarTranscripciones
+            Status: Enabled
+            Prefix: transcripciones/
+            ExpirationInDays: !Ref DiasRetencion
 
   PoliticaApp:
     Type: AWS::IAM::ManagedPolicy
