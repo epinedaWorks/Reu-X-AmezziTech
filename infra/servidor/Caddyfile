@@ -1,0 +1,11 @@
+# HTTPS automático para el dominio de /etc/reux/config (REUX_DOMINIO).
+{$REUX_DOMINIO} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	reverse_proxy 127.0.0.1:3000
+}

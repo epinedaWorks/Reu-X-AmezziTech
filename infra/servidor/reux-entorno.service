@@ -1,0 +1,14 @@
+[Unit]
+Description=Reu-X - carga la configuracion y credenciales desde Parameter Store
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash /opt/reux/infra/servidor/entorno.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

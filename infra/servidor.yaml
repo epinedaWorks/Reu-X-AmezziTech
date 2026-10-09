@@ -1,0 +1,113 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Reu-X - servidor web (EC2 + Caddy con HTTPS automatico) que publica la app desde GitHub.
+
+Parameters:
+  Dominio:
+    Type: String
+    Default: reux.amezzi.tech
+    Description: Dominio publico de la app (debe apuntar con un registro A a la IP elastica).
+  Bucket:
+    Type: String
+    Description: Bucket de reuniones creado por infra/template.yaml.
+  Repositorio:
+    Type: String
+    Default: https://github.com/epinedaWorks/Reu-X-AmezziTech.git
+  ModeloBedrock:
+    Type: String
+    Default: us.anthropic.claude-sonnet-4-6
+  TipoInstancia:
+    Type: String
+    Default: t4g.small
+  Imagen:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+
+Resources:
+  GrupoSeguridad:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Reu-X - solo HTTP y HTTPS (la administracion es por SSM, sin SSH)
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIpv6: "::/0" }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIpv6: "::/0" }
+
+  Rol:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: reux-app
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [s3:PutObject, s3:GetObject]
+                Resource: !Sub "arn:aws:s3:::${Bucket}/*"
+              - Effect: Allow
+                Action: [transcribe:StartTranscriptionJob, transcribe:GetTranscriptionJob]
+                Resource: "*"
+              - Effect: Allow
+                Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
+                Resource: "*"
+              - Effect: Allow
+                Action: [ssm:GetParameter]
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/reux/*"
+
+  PerfilInstancia:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref Rol]
+
+  Servidor:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref Imagen
+      InstanceType: !Ref TipoInstancia
+      IamInstanceProfile: !Ref PerfilInstancia
+      SecurityGroupIds: [!GetAtt GrupoSeguridad.GroupId]
+      MetadataOptions: { HttpTokens: required, HttpEndpoint: enabled }
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs: { VolumeSize: 20, VolumeType: gp3, Encrypted: true }
+      Tags:
+        - { Key: Name, Value: reu-x }
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euxo pipefail
+          dnf install -y git
+          mkdir -p /etc/reux
+          cat > /etc/reux/config <<CONFIG
+          REUX_DOMINIO=${Dominio}
+          REUX_AWS_REGION=${AWS::Region}
+          REUX_BUCKET=${Bucket}
+          REUX_LLM=bedrock
+          REUX_BEDROCK_MODEL=${ModeloBedrock}
+          CONFIG
+          git clone ${Repositorio} /opt/reux
+          bash /opt/reux/infra/servidor/instalar.sh
+
+  IpElastica:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref Servidor
+      Tags:
+        - { Key: Name, Value: reu-x }
+
+Outputs:
+  IP:
+    Description: Cree un registro A del dominio apuntando a esta IP.
+    Value: !Ref IpElastica
+  Instancia:
+    Value: !Ref Servidor
+  URL:
+    Value: !Sub "https://${Dominio}"

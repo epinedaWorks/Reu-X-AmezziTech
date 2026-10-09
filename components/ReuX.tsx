@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   Check, ChevronDown, Circle, CircleAlert, CircleCheck, Copy, Download, FileCheck, FileDown, FileText, LoaderCircle, Mic,
-  Network, Plus, Printer, RefreshCw, ScrollText, Server, Type, Upload, X,
+  LogOut, Network, Plus, Printer, RefreshCw, ScrollText, Server, Type, Upload, X,
 } from "lucide-react";
 import { MinutaVista } from "./MinutaVista";
 import { Visuales, type Imagen } from "./Visuales";
@@ -218,6 +219,19 @@ export function ReuX() {
     }
   }
 
+  const router = useRouter();
+  // Hay sesión si existe la cookie visible que deja el inicio de sesión.
+  const conSesion = useSyncExternalStore(
+    () => () => {},
+    () => document.cookie.includes("reux_activa=1"),
+    () => false,
+  );
+
+  async function salir() {
+    await fetch("/api/acceso", { method: "DELETE" });
+    router.replace("/acceso");
+  }
+
   const ocupado = etapa !== null;
   const segundos = Math.max(0, Math.round((ahora - inicioEtapa) / 1000));
   const puedeGenerar = fuente === "archivo" ? Boolean(archivo) : Boolean(texto.trim());
@@ -258,6 +272,11 @@ export function ReuX() {
             </Boton>
           )}
           <Firma className="border-l border-borde pl-3 text-right sm:pl-4" />
+          {conSesion && (
+            <button onClick={salir} title="Cerrar sesión" aria-label="Cerrar sesión" className="text-tenue transition hover:text-marca">
+              <LogOut size={18} />
+            </button>
+          )}
         </div>
       </header>
 

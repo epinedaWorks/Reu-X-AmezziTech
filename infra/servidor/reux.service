@@ -1,0 +1,15 @@
+[Unit]
+Description=Reu-X (Next.js)
+Requires=reux-entorno.service
+After=reux-entorno.service
+
+[Service]
+User=reux
+WorkingDirectory=/opt/reux
+EnvironmentFile=/etc/reux/reux.env
+ExecStart=/usr/local/bin/node /opt/reux/node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
