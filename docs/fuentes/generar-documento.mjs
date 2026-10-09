@@ -316,6 +316,17 @@ const arquitectura = [
     [22, 78],
   ),
   nota("Pendiente sugerido:", "activar el versionado del bucket (o copias periódicas) para conservar historial de config/usuarios.json, y alarmas de CloudWatch para el servidor."),
+  H2("3.4 Diagramas de diseño"),
+  P("Los siguientes diagramas describen el sistema desde tres ángulos: los datos que maneja, las piezas de software que lo forman y los servicios que intervienen en cada capa."),
+  H3("Diagrama de clases"),
+  P("Muestra los modelos de datos —definidos como tipos de TypeScript con esquemas Zod— y los módulos del servidor (`lib/`) con sus funciones principales. La **Minuta** se compone de participantes, temas y tareas; los visuales (**Mapa**, **Infografia** y **Flujo**) tienen sus propias partes; **Usuario** y **Sesion** sostienen el acceso y los perfiles."),
+  ...imagen("../Reu-X_Diagrama_Clases.png", 624, 484, "Figura 4. Diagrama de clases: modelos de datos y módulos del servidor."),
+  H3("Diagrama de componentes"),
+  P("Separa lo que corre en el **navegador** (pantalla principal, vista de minuta, visuales, exportación y administración) de lo que corre en el **servidor EC2** (Caddy, proxy de acceso, tres grupos de API y tres servicios internos), y muestra las interfaces con **Amazon S3, Transcribe, Bedrock y Parameter Store**."),
+  ...imagen("../Reu-X_Diagrama_Componentes.png", 624, 404, "Figura 5. Diagrama de componentes: navegador, servidor y servicios de AWS."),
+  H3("Arquitectura de servicios"),
+  P("Organiza el sistema en cinco capas —presentación, borde y seguridad, servicios de aplicación (API), servicios de dominio e integración, y servicios de AWS— e indica qué servicio atiende cada responsabilidad."),
+  ...imagen("../Reu-X_Arquitectura_Servicios.png", 624, 428, "Figura 6. Arquitectura de servicios por capas."),
 ];
 
 const programador = [

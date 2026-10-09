@@ -122,3 +122,107 @@ def leyenda(pasos, x0, y0, columnas=2, ancho_col=88, paso_y=4.6):
         y = y0 - fila * paso_y
         numero(x + 1.5, y, n, radio=1.5, tam=8.5)
         ax.text(x + 4, y, t, ha="left", va="center", fontsize=9, color=NEGRO)
+
+
+# ───────── UML ─────────
+import math  # noqa: E402
+
+from matplotlib.patches import Polygon  # noqa: E402
+
+AZUL_CLASE = "#e8ecf2"
+NARANJA_MODULO = "#fff1dc"
+MONO = "DejaVu Sans Mono"
+LH = 2.55  # alto de línea en clases
+
+
+def paquete(x0, y0, x1, y1, nombre, color=GRIS):
+    """Paquete UML: rectángulo con pestaña y nombre."""
+    ancho_tab = min(len(nombre) * 1.15 + 4, x1 - x0)
+    ax.add_patch(Rectangle((x0, y1), ancho_tab, 3.6, facecolor="#f4f5f7", edgecolor=color, linewidth=1.2, zorder=1))
+    ax.add_patch(Rectangle((x0, y0), x1 - x0, y1 - y0, facecolor="#fbfbfc", edgecolor=color, linewidth=1.2, zorder=0.5))
+    ax.text(x0 + 2, y1 + 1.8, nombre, ha="left", va="center", fontsize=9.5, fontweight="bold", color=NEGRO, zorder=2)
+
+
+def clase(x, top, w, nombre, atributos=(), metodos=(), estereotipo=None, fondo=AZUL_CLASE, borde=NEGRO):
+    """Clase UML con compartimentos. Devuelve sus límites."""
+    cab = 4.4 + (2.3 if estereotipo else 0)
+    h_atr = len(atributos) * LH + 1.4 if atributos else 1.4
+    h_met = len(metodos) * LH + 1.4 if metodos else 0
+    h = cab + h_atr + h_met
+    y0 = top - h
+    ax.add_patch(Rectangle((x, y0), w, h, facecolor="white", edgecolor=borde, linewidth=1.3, zorder=3))
+    ax.add_patch(Rectangle((x, top - cab), w, cab, facecolor=fondo, edgecolor=borde, linewidth=1.3, zorder=3))
+    if estereotipo:
+        ax.text(x + w / 2, top - 1.7, f"«{estereotipo}»", ha="center", va="center", fontsize=7.6, style="italic", color=GRIS, zorder=4)
+    ax.text(x + w / 2, top - cab + 2.1, nombre, ha="center", va="center", fontsize=9.4, fontweight="bold", color=NEGRO, zorder=4)
+    y = top - cab - 0.7
+    for a in atributos:
+        ax.text(x + 1.2, y - LH / 2, a, ha="left", va="center", fontsize=7.5, family=MONO, color=NEGRO, zorder=4)
+        y -= LH
+    if metodos:
+        y = top - cab - h_atr
+        ax.plot([x, x + w], [y, y], color=borde, linewidth=1.0, zorder=4)
+        y -= 0.7
+        for m in metodos:
+            ax.text(x + 1.2, y - LH / 2, m, ha="left", va="center", fontsize=7.5, family=MONO, color=NEGRO, zorder=4)
+            y -= LH
+    return {"x0": x, "x1": x + w, "y0": y0, "y1": top, "cx": x + w / 2, "cy": y0 + h / 2}
+
+
+def relacion(a, b, tipo="asociacion", etiqueta="", mult=None, color=NEGRO, en=None):
+    """Relación UML de a hacia b.
+    composicion: rombo lleno en a (el todo) · dependencia: discontinua con flecha abierta en b ·
+    asociacion: línea con flecha abierta en b."""
+    (x1, y1), (x2, y2) = a, b
+    estilo = (0, (4, 3)) if tipo == "dependencia" else "solid"
+    ax.plot([x1, x2], [y1, y2], color=color, linewidth=1.1, linestyle=estilo, zorder=2.5)
+    d = math.hypot(x2 - x1, y2 - y1) or 1
+    ux, uy = (x2 - x1) / d, (y2 - y1) / d
+    px, py = -uy, ux
+    if tipo == "composicion":
+        L, W = 2.6, 1.1
+        pts = [(x1, y1), (x1 + ux * L / 2 + px * W, y1 + uy * L / 2 + py * W), (x1 + ux * L, y1 + uy * L),
+               (x1 + ux * L / 2 - px * W, y1 + uy * L / 2 - py * W)]
+        ax.add_patch(Polygon(pts, closed=True, facecolor=color, edgecolor=color, zorder=5))
+    else:
+        L, W = 2.0, 1.0
+        ax.plot([x2 - ux * L + px * W, x2, x2 - ux * L - px * W], [y2 - uy * L + py * W, y2, y2 - uy * L - py * W],
+                color=color, linewidth=1.1, zorder=5)
+    if mult:
+        ax.text(x2 - ux * 3.2 + px * 1.6, y2 - uy * 3.2 + py * 1.6, mult, ha="center", va="center", fontsize=7.6, color=GRIS, zorder=6)
+    if etiqueta:
+        mx, my = en or ((x1 + x2) / 2, (y1 + y2) / 2)
+        ax.text(mx, my, etiqueta, ha="center", va="center", fontsize=7.6, color=GRIS, style="italic", zorder=6,
+                bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="none"))
+
+
+def componente(x, y, w, h, nombre, detalle="", fondo="white", borde=NEGRO):
+    """Componente UML (rectángulo con el símbolo de componente)."""
+    ax.add_patch(Rectangle((x, y), w, h, facecolor=fondo, edgecolor=borde, linewidth=1.3, zorder=3))
+    sx, sy = x + w - 4.2, y + h - 3.8
+    ax.add_patch(Rectangle((sx, sy - 2.6), 2.8, 3.0, facecolor="white", edgecolor=borde, linewidth=0.9, zorder=4))
+    for dy in (0.15, -1.3):
+        ax.add_patch(Rectangle((sx - 0.7, sy + dy - 0.9), 1.4, 0.7, facecolor="white", edgecolor=borde, linewidth=0.9, zorder=5))
+    ax.text(x + 1.6, y + h - 2.3, "«componente»", ha="left", va="center", fontsize=7, style="italic", color=GRIS, zorder=4)
+    ax.text(x + 1.6, y + h - 5.0, nombre, ha="left", va="center", fontsize=9, fontweight="bold", color=NEGRO, zorder=4)
+    if detalle:
+        ax.text(x + 1.6, y + h - 7.6, detalle, ha="left", va="top", fontsize=7.4, color=GRIS, zorder=4, linespacing=1.3)
+    return {"x0": x, "x1": x + w, "y0": y, "y1": y + h, "cx": x + w / 2, "cy": y + h / 2}
+
+
+def interfaz(x, y, nombre, lado="arriba"):
+    """Interfaz provista (círculo, notación «lollipop»)."""
+    ax.add_patch(plt.Circle((x, y), 1.3, facecolor="white", edgecolor=NEGRO, linewidth=1.2, zorder=6))
+    off = {"arriba": (0, 2.6, "center", "bottom"), "abajo": (0, -2.6, "center", "top"),
+           "izquierda": (-2.2, 0, "right", "center"), "derecha": (2.2, 0, "left", "center")}[lado]
+    ax.text(x + off[0], y + off[1], nombre, ha=off[2], va=off[3], fontsize=7.6, color=NEGRO, zorder=6,
+            bbox=dict(boxstyle="round,pad=0.12", facecolor="white", edgecolor="none"))
+
+
+def nodo(x0, y0, x1, y1, nombre, color=GRIS, relleno="#f7f8fa"):
+    """Nodo de despliegue UML (caja 3D simple)."""
+    p = 2.0
+    ax.add_patch(Polygon([(x0, y1), (x0 + p, y1 + p), (x1 + p, y1 + p), (x1, y1)], closed=True, facecolor="#e9ecf0", edgecolor=color, linewidth=1.2, zorder=0.6))
+    ax.add_patch(Polygon([(x1, y0), (x1 + p, y0 + p), (x1 + p, y1 + p), (x1, y1)], closed=True, facecolor="#dde1e7", edgecolor=color, linewidth=1.2, zorder=0.6))
+    ax.add_patch(Rectangle((x0, y0), x1 - x0, y1 - y0, facecolor=relleno, edgecolor=color, linewidth=1.2, zorder=0.7))
+    ax.text(x0 + 1.8, y1 - 2.4, nombre, ha="left", va="center", fontsize=10, fontweight="bold", color=NEGRO, zorder=2)
