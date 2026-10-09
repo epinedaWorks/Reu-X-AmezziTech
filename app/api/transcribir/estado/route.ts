@@ -1,11 +1,19 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { GetTranscriptionJobCommand } from "@aws-sdk/client-transcribe";
-import { bucket, s3, transcribe } from "@/lib/aws";
+import { bucket, s3, transcribe, respuestaErrorAws } from "@/lib/aws";
 import { formatearTranscripcion, type SalidaTranscribe } from "@/lib/transcripcion";
 
 // Consulta el estado de un trabajo de Transcribe. Cuando termina devuelve el
 // texto ya formateado por hablante.
 export async function POST(req: Request) {
+  try {
+    return await manejar(req);
+  } catch (e) {
+    return respuestaErrorAws(e);
+  }
+}
+
+async function manejar(req: Request) {
   const { trabajo } = (await req.json()) as { trabajo?: string };
   if (!trabajo || !/^reux-[\w-]+$/.test(trabajo)) {
     return Response.json({ error: "Trabajo inválido." }, { status: 400 });

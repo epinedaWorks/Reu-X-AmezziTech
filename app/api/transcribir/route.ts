@@ -1,8 +1,16 @@
 import { StartTranscriptionJobCommand } from "@aws-sdk/client-transcribe";
-import { bucket, transcribe } from "@/lib/aws";
+import { bucket, transcribe, respuestaErrorAws } from "@/lib/aws";
 
 // Inicia un trabajo de Amazon Transcribe sobre un archivo ya subido a S3.
 export async function POST(req: Request) {
+  try {
+    return await manejar(req);
+  } catch (e) {
+    return respuestaErrorAws(e);
+  }
+}
+
+async function manejar(req: Request) {
   const { key } = (await req.json()) as { key?: string };
   if (!key?.startsWith("entradas/")) {
     return Response.json({ error: "Archivo inválido." }, { status: 400 });

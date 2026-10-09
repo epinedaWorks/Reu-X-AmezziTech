@@ -1,11 +1,19 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { bucket, s3 } from "@/lib/aws";
+import { bucket, s3, respuestaErrorAws } from "@/lib/aws";
 import { EXTENSIONES_MEDIA, TAMANO_MAXIMO } from "@/lib/formatos";
 
 // Devuelve una URL firmada para que el navegador suba el archivo directo a S3
 // (sin pasar el video por el servidor).
 export async function POST(req: Request) {
+  try {
+    return await manejar(req);
+  } catch (e) {
+    return respuestaErrorAws(e);
+  }
+}
+
+async function manejar(req: Request) {
   const { nombre, tipo, tamano } = (await req.json()) as {
     nombre?: string;
     tipo?: string;

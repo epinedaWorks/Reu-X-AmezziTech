@@ -26,13 +26,29 @@ async function postJSON<T>(url: string, body: unknown): Promise<T> {
   return datos as T;
 }
 
+const CREDENCIALES_VENCIDAS =
+  "Las credenciales de AWS del servidor vencieron. Renuévelas (en local: aws login --profile reux) y vuelva a intentar.";
+
+const MENSAJES_S3: Record<string, string> = {
+  ExpiredToken: CREDENCIALES_VENCIDAS,
+  TokenRefreshRequired: CREDENCIALES_VENCIDAS,
+  InvalidToken: CREDENCIALES_VENCIDAS,
+  AccessDenied: "S3 denegó la subida. Revise que las credenciales del servidor tengan permiso sobre el bucket.",
+  NoSuchBucket: "El bucket configurado en REUX_BUCKET no existe. Revise la configuración del servidor.",
+};
+
 function subirConProgreso(url: string, archivo: File, onProgreso: (p: number) => void): Promise<void> {
   return new Promise((ok, mal) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url);
     xhr.setRequestHeader("Content-Type", archivo.type || "application/octet-stream");
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgreso(e.loaded / e.total);
-    xhr.onload = () => (xhr.status < 300 ? ok() : mal(new Error(`S3 rechazó la subida (${xhr.status}).`)));
+    xhr.onload = () => {
+      if (xhr.status < 300) return ok();
+      // S3 responde con un XML <Error><Code>…</Code></Error>.
+      const codigo = xhr.responseText.match(/<Code>([^<]+)<\/Code>/)?.[1] ?? "";
+      mal(new Error(MENSAJES_S3[codigo] ?? `S3 rechazó la subida (${xhr.status}${codigo ? `, ${codigo}` : ""}).`));
+    };
     xhr.onerror = () => mal(new Error("No se pudo subir el archivo. Revisa la conexión y la configuración CORS del bucket."));
     xhr.send(archivo);
   });
