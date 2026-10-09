@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Check, Circle, CircleAlert, CircleCheck, Copy, Download, FileCheck, FileDown, FileText, LoaderCircle, Mic,
-  Network, Printer, RefreshCw, ScrollText, Server, Type, Upload, X,
+  Check, ChevronDown, Circle, CircleAlert, CircleCheck, Copy, Download, FileCheck, FileDown, FileText, LoaderCircle, Mic,
+  Network, Plus, Printer, RefreshCw, ScrollText, Server, Type, Upload, X,
 } from "lucide-react";
 import { MinutaVista } from "./MinutaVista";
 import { Visuales, type Imagen } from "./Visuales";
@@ -71,6 +71,7 @@ export function ReuX() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [texto, setTexto] = useState("");
   const [contexto, setContexto] = useState<Contexto>(CONTEXTO_VACIO);
+  const [verDatos, setVerDatos] = useState(false);
 
   const [etapa, setEtapa] = useState<Etapa | null>(null);
   const [progreso, setProgreso] = useState(0);
@@ -220,180 +221,198 @@ export function ReuX() {
   const ocupado = etapa !== null;
   const segundos = Math.max(0, Math.round((ahora - inicioEtapa) / 1000));
   const puedeGenerar = fuente === "archivo" ? Boolean(archivo) : Boolean(texto.trim());
+  const datosLlenos = CAMPOS.filter(([k]) => contexto[k].trim());
 
   const campo =
     "w-full border border-borde bg-white px-2.5 py-1.5 text-[13.5px] text-tinta outline-none transition placeholder:text-[#a0a7b2] focus:border-marca focus:ring-2 focus:ring-marca/10";
 
+  const alerta = error && (
+    <div role="alert" className="flex items-start gap-2 border border-peligro/30 bg-peligro/5 px-3 py-2.5 text-[13px] text-peligro">
+      <CircleAlert size={16} className="mt-0.5 shrink-0" />
+      <span className="flex-1">{error}</span>
+      <button onClick={() => setError(null)} aria-label="Cerrar" className="shrink-0 hover:opacity-70">
+        <X size={15} />
+      </button>
+    </div>
+  );
+
   return (
-    <div className="flex min-h-dvh flex-col lg:h-dvh">
+    <div className="flex h-dvh flex-col">
       {/* Barra superior */}
-      <header className="no-print flex h-14 shrink-0 items-center justify-between border-b border-borde bg-white px-5">
-        <div className="flex items-center gap-4">
-          <div className="grid h-8 w-8 place-items-center bg-marca font-serif text-[15px] font-bold text-white">R</div>
-          <div className="flex items-baseline gap-3">
-            <span className="text-[15px] font-semibold tracking-tight text-marca">Reu-X</span>
-            <span className="hidden h-4 w-px bg-borde sm:block" />
-            <span className="hidden text-[13px] text-tenue sm:block">Actas y minutas de reunión</span>
-          </div>
+      <header className="no-print flex h-14 shrink-0 items-center justify-between gap-3 border-b border-borde bg-white px-4 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+          <div className="grid h-8 w-8 shrink-0 place-items-center bg-marca font-serif text-[15px] font-bold text-white">R</div>
+          <span className="text-[15px] font-semibold tracking-tight text-marca">Reu-X</span>
+          <span className="hidden h-4 w-px bg-borde sm:block" />
+          <span className="hidden truncate text-[13px] text-tenue sm:block">Actas y minutas de reunión</span>
         </div>
-        <div className="flex items-center gap-3 text-[12.5px]">
+        <div className="flex shrink-0 items-center gap-3 text-[12.5px]">
+          {demo && <span className="border border-acento/40 bg-acento/10 px-2 py-0.5 font-medium text-acento">Demostración</span>}
           <span className="hidden items-center gap-1.5 text-tenue md:inline-flex">
             <Server size={14} /> AWS · us-west-1
           </span>
-          {demo && <span className="border border-acento/40 bg-acento/10 px-2 py-0.5 font-medium text-acento">Modo demostración</span>}
-          <span className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] text-tenue sm:block">Amezzi</span>
+          {minuta && !ocupado ? (
+            <Boton onClick={nuevaReunion} icono={Plus}>
+              Nueva reunión
+            </Boton>
+          ) : (
+            <span className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] text-tenue sm:block">Amezzi</span>
+          )}
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col lg:grid lg:min-h-0 lg:grid-cols-[340px_minmax(0,1fr)]">
-        {/* Panel de entrada */}
-        <aside className="no-print panel-scroll flex flex-col border-b border-borde bg-white lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r">
-          <div className="flex-1 space-y-5 p-5">
-            <section>
-              <Encabezado n={1} titulo="Fuente de la reunión" />
-              <div className="mt-3 grid grid-cols-2 border border-borde text-[13px] font-medium">
-                {(
-                  [
-                    ["archivo", "Grabación", Mic],
-                    ["texto", "Texto", Type],
-                  ] as const
-                ).map(([f, nombre, Icono], i) => (
-                  <button
-                    key={f}
-                    disabled={ocupado}
-                    onClick={() => setFuente(f)}
-                    className={`inline-flex items-center justify-center gap-2 py-2 transition ${i > 0 ? "border-l border-borde" : ""} ${
-                      fuente === f ? "bg-marca text-white" : "text-tenue hover:bg-fondo hover:text-tinta"
-                    }`}
-                  >
-                    <Icono size={15} /> {nombre}
-                  </button>
-                ))}
-              </div>
-
-              {fuente === "archivo" ? (
-                <div
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (!ocupado) elegirArchivo(e.dataTransfer.files[0]);
-                  }}
-                  onClick={() => !ocupado && inputArchivo.current?.click()}
-                  className="mt-3 cursor-pointer border border-dashed border-[#b9c1cc] bg-fondo px-4 py-5 text-center transition hover:border-marca hover:bg-marca-suave/50"
-                >
-                  <input
-                    ref={inputArchivo}
-                    type="file"
-                    hidden
-                    accept={[...EXTENSIONES_MEDIA, ...EXTENSIONES_TEXTO].map((e) => `.${e}`).join(",")}
-                    onChange={(e) => elegirArchivo(e.target.files?.[0])}
-                  />
-                  {archivo ? (
-                    <>
-                      <FileCheck size={22} className="mx-auto text-exito" />
-                      <p className="mt-2 break-all text-[13.5px] font-medium text-tinta">{archivo.name}</p>
-                      <p className="text-[12px] text-tenue">{tamanoLegible(archivo.size)} · Clic para cambiar</p>
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={22} className="mx-auto text-tenue" />
-                      <p className="mt-2 text-[13.5px] font-medium text-tinta">Arrastre la grabación o haga clic</p>
-                      <p className="mt-0.5 text-[12px] text-tenue">MP3, MP4, M4A, WAV y otros · hasta 2 GB</p>
-                    </>
-                  )}
+      {!minuta ? (
+        /* ───────── Carga y procesamiento: una sola pantalla, sin desplazamiento ───────── */
+        <main className="panel-scroll flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-3 sm:p-6">
+          <div className="w-full max-w-4xl border border-borde bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)]">
+            {ocupado ? (
+              <Procesando
+                etapa={etapa}
+                fuente={fuente}
+                archivo={archivo}
+                caracteres={texto.length}
+                datos={datosLlenos.map(([k, etiqueta]) => [etiqueta, contexto[k]] as const)}
+                progreso={progreso}
+                segundos={segundos}
+              />
+            ) : (
+              <>
+                <div className="border-b border-linea px-5 py-4 sm:px-7">
+                  <h1 className="font-serif text-[22px] font-semibold leading-tight text-marca sm:text-[25px]">Nueva minuta de reunión</h1>
+                  <p className="mt-0.5 text-[13px] text-tenue">
+                    Cargue la grabación o el texto de la reunión. Reu-X transcribe, identifica a los participantes y redacta el acta.
+                  </p>
                 </div>
-              ) : (
-                <div className="mt-3">
-                  <textarea
-                    value={texto}
-                    onChange={(e) => setTexto(e.target.value)}
-                    disabled={ocupado}
-                    rows={5}
-                    placeholder="Pegue la transcripción, las notas o el chat de la reunión."
-                    className={`${campo} panel-scroll resize-y leading-relaxed`}
-                  />
-                  <div className="mt-1.5 flex items-center justify-between text-[12px]">
-                    <div className="flex gap-3">
-                      <input
-                        ref={inputTexto}
-                        type="file"
-                        hidden
-                        accept={EXTENSIONES_TEXTO.map((e) => `.${e}`).join(",")}
-                        onChange={(e) => elegirArchivo(e.target.files?.[0])}
-                      />
-                      <button onClick={() => inputTexto.current?.click()} className="font-medium text-marca hover:underline">
-                        Cargar archivo
-                      </button>
-                      <button onClick={() => setTexto(REUNION_EJEMPLO)} className="font-medium text-marca hover:underline">
-                        Usar ejemplo
-                      </button>
+
+                <div className="grid gap-5 px-5 py-5 sm:px-7 md:grid-cols-2 md:gap-8">
+                  {/* Fuente */}
+                  <section>
+                    <Encabezado n={1} titulo="Fuente de la reunión" />
+                    <div className="mt-3 grid grid-cols-2 border border-borde text-[13px] font-medium">
+                      {(
+                        [
+                          ["archivo", "Grabación", Mic],
+                          ["texto", "Texto", Type],
+                        ] as const
+                      ).map(([f, nombre, Icono], i) => (
+                        <button
+                          key={f}
+                          onClick={() => setFuente(f)}
+                          className={`inline-flex items-center justify-center gap-2 py-2 transition ${i > 0 ? "border-l border-borde" : ""} ${
+                            fuente === f ? "bg-marca text-white" : "text-tenue hover:bg-fondo hover:text-tinta"
+                          }`}
+                        >
+                          <Icono size={15} /> {nombre}
+                        </button>
+                      ))}
                     </div>
-                    <span className="text-tenue">{texto.length.toLocaleString("es")} caracteres</span>
-                  </div>
+
+                    {fuente === "archivo" ? (
+                      <div
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          elegirArchivo(e.dataTransfer.files[0]);
+                        }}
+                        onClick={() => inputArchivo.current?.click()}
+                        className="mt-3 flex h-[130px] cursor-pointer md:h-[170px] flex-col items-center justify-center border border-dashed border-[#b9c1cc] bg-fondo px-4 text-center transition hover:border-marca hover:bg-marca-suave/50"
+                      >
+                        <input
+                          ref={inputArchivo}
+                          type="file"
+                          hidden
+                          accept={[...EXTENSIONES_MEDIA, ...EXTENSIONES_TEXTO].map((e) => `.${e}`).join(",")}
+                          onChange={(e) => elegirArchivo(e.target.files?.[0])}
+                        />
+                        {archivo ? (
+                          <>
+                            <FileCheck size={24} className="text-exito" />
+                            <p className="mt-2 line-clamp-2 break-all text-[13.5px] font-medium text-tinta">{archivo.name}</p>
+                            <p className="text-[12px] text-tenue">{tamanoLegible(archivo.size)} · Clic para cambiar</p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={24} className="text-tenue" />
+                            <p className="mt-2 text-[13.5px] font-medium text-tinta">Arrastre la grabación o haga clic</p>
+                            <p className="mt-0.5 text-[12px] text-tenue">MP3, MP4, M4A, WAV y otros · hasta 2 GB</p>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-3">
+                        <textarea
+                          value={texto}
+                          onChange={(e) => setTexto(e.target.value)}
+                          placeholder="Pegue la transcripción, las notas o el chat de la reunión."
+                          className={`${campo} panel-scroll h-[110px] resize-none leading-relaxed md:h-[140px]`}
+                        />
+                        <div className="mt-1.5 flex items-center justify-between text-[12px]">
+                          <div className="flex gap-3">
+                            <input
+                              ref={inputTexto}
+                              type="file"
+                              hidden
+                              accept={EXTENSIONES_TEXTO.map((e) => `.${e}`).join(",")}
+                              onChange={(e) => elegirArchivo(e.target.files?.[0])}
+                            />
+                            <button onClick={() => inputTexto.current?.click()} className="font-medium text-marca hover:underline">
+                              Cargar archivo
+                            </button>
+                            <button onClick={() => setTexto(REUNION_EJEMPLO)} className="font-medium text-marca hover:underline">
+                              Usar ejemplo
+                            </button>
+                          </div>
+                          <span className="text-tenue">{texto.length.toLocaleString("es")} caracteres</span>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  {/* Datos: siempre visibles en pantallas anchas; plegables en angostas */}
+                  <section>
+                    <button onClick={() => setVerDatos((v) => !v)} className="w-full text-left md:pointer-events-none">
+                      <Encabezado
+                        n={2}
+                        titulo="Datos de la reunión"
+                        nota={datosLlenos.length ? `${datosLlenos.length} ingresado${datosLlenos.length > 1 ? "s" : ""}` : "Opcional"}
+                        plegable={!verDatos}
+                      />
+                    </button>
+                    <div className={`mt-3 grid-cols-2 gap-x-3 gap-y-2 ${verDatos ? "grid" : "hidden"} md:grid`}>
+                      {CAMPOS.map(([k, etiqueta, ph, span]) => (
+                        <label key={k} className={span === 2 ? "col-span-2" : ""}>
+                          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-tenue">{etiqueta}</span>
+                          <input
+                            value={contexto[k]}
+                            onChange={(e) => setContexto({ ...contexto, [k]: e.target.value })}
+                            placeholder={ph}
+                            className={campo}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </section>
                 </div>
-              )}
-            </section>
 
-            <section>
-              <Encabezado n={2} titulo="Datos de la reunión" nota="Opcional" />
-              <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
-                {(
-                  [
-                    ["titulo", "Título", "Comité de proyecto", 2],
-                    ["fecha", "Fecha", "9 oct 2026", 1],
-                    ["lugar", "Lugar", "Sala B / Zoom", 1],
-                    ["participantes", "Participantes", "Nombre (cargo), …", 2],
-                    ["notas", "Indicaciones", "Ej.: enfatizar acuerdos de presupuesto", 2],
-                  ] as const
-                ).map(([k, etiqueta, ph, span]) => (
-                  <label key={k} className={span === 2 ? "col-span-2" : ""}>
-                    <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-tenue">{etiqueta}</span>
-                    <input
-                      value={contexto[k]}
-                      onChange={(e) => setContexto({ ...contexto, [k]: e.target.value })}
-                      placeholder={ph}
-                      disabled={ocupado}
-                      className={campo}
-                    />
-                  </label>
-                ))}
-              </div>
-            </section>
-
-            {ocupado && <Progreso etapa={etapa} fuente={fuente} progreso={progreso} segundos={segundos} />}
-
-            {error && (
-              <div role="alert" className="flex items-start gap-2 border border-peligro/30 bg-peligro/5 px-3 py-2.5 text-[13px] text-peligro">
-                <CircleAlert size={16} className="mt-0.5 shrink-0" />
-                <span className="flex-1">{error}</span>
-                <button onClick={() => setError(null)} aria-label="Cerrar" className="shrink-0 hover:opacity-70">
-                  <X size={15} />
-                </button>
-              </div>
+                <div className="space-y-3 border-t border-linea px-5 py-4 sm:px-7">
+                  {alerta}
+                  <button
+                    onClick={procesar}
+                    disabled={!puedeGenerar}
+                    className="inline-flex w-full items-center justify-center gap-2 bg-marca py-2.5 text-[14px] font-semibold text-white transition hover:bg-marca-hover disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <FileText size={16} /> Generar minuta
+                  </button>
+                </div>
+              </>
             )}
           </div>
-
-          <div className="sticky bottom-0 space-y-1.5 border-t border-borde bg-white px-5 py-4">
-            <button
-              onClick={procesar}
-              disabled={ocupado || !puedeGenerar}
-              className="inline-flex w-full items-center justify-center gap-2 bg-marca py-2.5 text-[14px] font-semibold text-white transition hover:bg-marca-hover disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {ocupado ? <LoaderCircle size={16} className="animate-spin" /> : <FileText size={16} />}
-              {ocupado ? "Procesando…" : minuta ? "Generar nueva minuta" : "Generar minuta"}
-            </button>
-            {minuta && !ocupado && (
-              <button onClick={nuevaReunion} className="w-full py-1 text-[12.5px] font-medium text-tenue hover:text-marca">
-                Limpiar y empezar otra reunión
-              </button>
-            )}
-          </div>
-        </aside>
-
-        {/* Área de trabajo */}
-        <main className="flex min-h-[70vh] flex-col lg:min-h-0">
-          <div className="no-print flex shrink-0 flex-wrap items-end justify-between gap-x-6 border-b border-borde bg-white px-5">
-            <nav className="flex gap-6 text-[13.5px] font-medium" role="tablist">
+        </main>
+      ) : (
+        /* ───────── Espacio de trabajo ───────── */
+        <main className="flex min-h-0 flex-1 flex-col">
+          <div className="no-print flex shrink-0 flex-wrap items-end justify-between gap-x-6 border-b border-borde bg-white px-4 sm:px-5">
+            <nav className="flex gap-5 text-[13.5px] font-medium sm:gap-6" role="tablist">
               {(
                 [
                   ["minuta", "Minuta", ScrollText],
@@ -405,10 +424,9 @@ export function ReuX() {
                   key={id}
                   role="tab"
                   aria-selected={pestana === id}
-                  disabled={!minuta}
                   onClick={() => setPestana(id)}
-                  className={`-mb-px inline-flex items-center gap-2 border-b-2 py-3.5 transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                    pestana === id && minuta ? "border-marca text-marca" : "border-transparent text-tenue hover:text-tinta"
+                  className={`-mb-px inline-flex items-center gap-2 border-b-2 py-3.5 transition ${
+                    pestana === id ? "border-marca text-marca" : "border-transparent text-tenue hover:text-tinta"
                   }`}
                 >
                   <Icono size={15} /> {nombre}
@@ -416,7 +434,7 @@ export function ReuX() {
               ))}
             </nav>
 
-            {minuta && pestana === "minuta" && (
+            {pestana === "minuta" && (
               <div className="flex flex-wrap gap-1.5 py-2 text-[12.5px]">
                 <Boton onClick={exportarWord} icono={FileDown} titulo="Incluye el último visual generado">Word</Boton>
                 <Boton onClick={() => window.print()} icono={Printer}>PDF</Boton>
@@ -433,59 +451,65 @@ export function ReuX() {
             )}
           </div>
 
+          {(ocupado || error) && (
+            <div className="no-print shrink-0 space-y-2 border-b border-borde bg-white px-4 py-2.5 sm:px-5">
+              {ocupado && (
+                <p className="inline-flex items-center gap-2 text-[13px] text-tinta">
+                  <LoaderCircle size={15} className="animate-spin text-marca" /> Regenerando la minuta…
+                  <span className="tabular-nums text-tenue">{duracion(segundos)}</span>
+                </p>
+              )}
+              {alerta}
+            </div>
+          )}
+
           <div className="relative min-h-0 flex-1">
-            {!minuta ? (
-              <Bienvenida />
-            ) : (
-              <>
-                {pestana === "minuta" && (
-                  <div className="imprimible panel-scroll absolute inset-0 overflow-y-auto p-5 lg:p-6">
-                    <MinutaVista m={minuta} />
-                  </div>
-                )}
+            {pestana === "minuta" && (
+              <div className="imprimible panel-scroll absolute inset-0 overflow-y-auto p-4 lg:p-6">
+                <MinutaVista m={minuta} />
+              </div>
+            )}
 
-                {/* Se mantiene montado (fuera de pantalla, no con display:none) para no perder lo
-                    generado al cambiar de pestaña y poder exportarlo al Word desde la minuta. */}
-                <div
-                  className={pestana === "diagrama" ? "no-print absolute inset-0" : "no-print pointer-events-none fixed -left-[10000px] top-0 h-[900px] w-[1200px]"}
-                  aria-hidden={pestana !== "diagrama"}
-                  inert={pestana !== "diagrama"}
-                >
-                  <Visuales key={version} minuta={minuta} activo={pestana === "diagrama"} onImagen={alImagen} onError={setError} />
+            {/* Se mantiene montado (fuera de pantalla, no con display:none) para no perder lo
+                generado al cambiar de pestaña y poder exportarlo al Word desde la minuta. */}
+            <div
+              className={pestana === "diagrama" ? "no-print absolute inset-0" : "no-print pointer-events-none fixed -left-[10000px] top-0 h-[900px] w-[1200px]"}
+              aria-hidden={pestana !== "diagrama"}
+              inert={pestana !== "diagrama"}
+            >
+              <Visuales key={version} minuta={minuta} activo={pestana === "diagrama"} onImagen={alImagen} onError={setError} />
+            </div>
+
+            {pestana === "transcripcion" && (
+              <div className="no-print absolute inset-0 flex flex-col p-4 lg:p-6">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-[13px] text-tenue">
+                    Corrija nombres o cifras (por ejemplo, reemplace “Hablante 1” por el nombre real) y regenere la minuta.
+                  </p>
+                  <div className="flex gap-1.5 text-[12.5px]">
+                    <Boton onClick={regenerar} disabled={ocupado || !transcripcion.trim()} icono={RefreshCw} principal>
+                      Regenerar minuta
+                    </Boton>
+                    <Boton
+                      onClick={() =>
+                        descargar(new Blob([transcripcion], { type: "text/plain" }), nombreArchivo(minuta, "txt").replace(".txt", "-transcripcion.txt"))
+                      }
+                      icono={Download}
+                    >
+                      Descargar .txt
+                    </Boton>
+                  </div>
                 </div>
-
-                {pestana === "transcripcion" && (
-                  <div className="no-print absolute inset-0 flex flex-col p-5 lg:p-6">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-[13px] text-tenue">
-                        Corrija nombres o cifras (por ejemplo, reemplace “Hablante 1” por el nombre real) y regenere la minuta.
-                      </p>
-                      <div className="flex gap-1.5 text-[12.5px]">
-                        <Boton onClick={regenerar} disabled={ocupado || !transcripcion.trim()} icono={RefreshCw} principal>
-                          Regenerar minuta
-                        </Boton>
-                        <Boton
-                          onClick={() =>
-                            descargar(new Blob([transcripcion], { type: "text/plain" }), nombreArchivo(minuta, "txt").replace(".txt", "-transcripcion.txt"))
-                          }
-                          icono={Download}
-                        >
-                          Descargar .txt
-                        </Boton>
-                      </div>
-                    </div>
-                    <textarea
-                      value={transcripcion}
-                      onChange={(e) => setTranscripcion(e.target.value)}
-                      className="panel-scroll min-h-[300px] w-full flex-1 resize-none border border-borde bg-white p-5 font-serif text-[15px] leading-relaxed text-tinta outline-none focus:border-marca"
-                    />
-                  </div>
-                )}
-              </>
+                <textarea
+                  value={transcripcion}
+                  onChange={(e) => setTranscripcion(e.target.value)}
+                  className="panel-scroll min-h-0 w-full flex-1 resize-none border border-borde bg-white p-5 font-serif text-[15px] leading-relaxed text-tinta outline-none focus:border-marca"
+                />
+              </div>
             )}
           </div>
         </main>
-      </div>
+      )}
 
       {aviso && (
         <div className="no-print fixed bottom-6 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 bg-marca px-4 py-2 text-[13px] text-white shadow-lg">
@@ -496,14 +520,27 @@ export function ReuX() {
   );
 }
 
-function Encabezado({ n, titulo, nota }: { n: number; titulo: string; nota?: string }) {
+const CAMPOS = [
+  ["titulo", "Título", "Comité de proyecto", 2],
+  ["fecha", "Fecha", "9 oct 2026", 1],
+  ["lugar", "Lugar", "Sala B / Zoom", 1],
+  ["participantes", "Participantes", "Nombre (cargo), …", 2],
+  ["notas", "Indicaciones", "Ej.: enfatizar acuerdos de presupuesto", 2],
+] as const;
+
+function Encabezado({ n, titulo, nota, plegable }: { n: number; titulo: string; nota?: string; plegable?: boolean }) {
   return (
     <div className="flex items-baseline justify-between border-b border-linea pb-1.5">
       <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-marca">
         <span className="mr-1.5 font-serif text-acento">{n}.</span>
         {titulo}
       </h2>
-      {nota && <span className="text-[11.5px] text-tenue">{nota}</span>}
+      <span className="inline-flex items-center gap-1 text-[11.5px] text-tenue">
+        {nota}
+        {plegable !== undefined && (
+          <ChevronDown size={14} className={`transition md:hidden ${plegable ? "" : "rotate-180"}`} />
+        )}
+      </span>
     </div>
   );
 }
@@ -533,79 +570,97 @@ function Boton({
   );
 }
 
-function Bienvenida() {
-  const pasos = [
-    { icono: Upload, titulo: "Cargue la reunión", texto: "Grabación de audio o video, o el texto de la transcripción o las notas." },
-    { icono: Mic, titulo: "Transcripción y análisis", texto: "Se identifican los participantes, los temas, los acuerdos y las tareas." },
-    { icono: ScrollText, titulo: "Revise y comparta", texto: "Minuta formal en Word o PDF, mapa mental, infografía y diagramas." },
-  ];
-  return (
-    <div className="flex h-full items-center justify-center p-8">
-      <div className="max-w-3xl">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-acento">Reu-X</p>
-        <h2 className="mt-2 font-serif text-[32px] font-semibold leading-tight text-marca">De la reunión al acta, en minutos.</h2>
-        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-tenue">
-          Cargue la grabación o la transcripción en el panel de la izquierda. Reu-X redacta una minuta formal y genera los
-          materiales para compartirla.
-        </p>
-        <ol className="mt-8 grid gap-px border border-borde bg-borde sm:grid-cols-3">
-          {pasos.map((p, i) => (
-            <li key={i} className="bg-white p-5">
-              <div className="flex items-center justify-between">
-                <p.icono size={20} className="text-marca" />
-                <span className="font-serif text-[13px] text-acento">0{i + 1}</span>
-              </div>
-              <p className="mt-3 text-[14px] font-semibold text-tinta">{p.titulo}</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-tenue">{p.texto}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </div>
-  );
-}
-
-function Progreso({ etapa, fuente, progreso, segundos }: { etapa: Etapa | null; fuente: Fuente; progreso: number; segundos: number }) {
-  const pasos: { id: Etapa; nombre: string }[] =
+// Vista mientras se procesa: qué se cargó y en qué paso va, todo a la vista.
+function Procesando({
+  etapa, fuente, archivo, caracteres, datos, progreso, segundos,
+}: {
+  etapa: Etapa | null;
+  fuente: Fuente;
+  archivo: File | null;
+  caracteres: number;
+  datos: (readonly [string, string])[];
+  progreso: number;
+  segundos: number;
+}) {
+  const pasos: { id: Etapa; nombre: string; detalle: string }[] =
     fuente === "archivo"
       ? [
-          { id: "subiendo", nombre: "Carga del archivo" },
-          { id: "transcribiendo", nombre: "Transcripción" },
-          { id: "redactando", nombre: "Redacción de la minuta" },
+          { id: "subiendo", nombre: "Carga del archivo", detalle: "Envío seguro al almacenamiento" },
+          { id: "transcribiendo", nombre: "Transcripción", detalle: "Reconocimiento de voz e identificación de participantes" },
+          { id: "redactando", nombre: "Redacción de la minuta", detalle: "Temas, acuerdos, tareas y responsables" },
         ]
-      : [{ id: "redactando", nombre: "Redacción de la minuta" }];
+      : [{ id: "redactando", nombre: "Redacción de la minuta", detalle: "Temas, acuerdos, tareas y responsables" }];
   const actual = pasos.findIndex((p) => p.id === etapa);
 
   return (
-    <section aria-live="polite">
-      <Encabezado n={3} titulo="Procesamiento" />
-      <ol className="mt-3 space-y-2.5 text-[13px]">
-        {pasos.map((p, i) => (
-          <li key={p.id} className="flex items-center gap-2.5">
-            {i < actual ? (
-              <CircleCheck size={17} className="text-exito" />
-            ) : i === actual ? (
-              <LoaderCircle size={17} className="animate-spin text-marca" />
-            ) : (
-              <Circle size={17} className="text-borde" />
-            )}
-            <span className={i === actual ? "font-medium text-tinta" : "text-tenue"}>{p.nombre}</span>
-            {i === actual && (
-              <span className="ml-auto tabular-nums text-tenue">
-                {p.id === "subiendo" ? `${Math.round(progreso * 100)} %` : duracion(segundos)}
-              </span>
-            )}
-          </li>
-        ))}
-      </ol>
-      {etapa === "subiendo" && (
-        <div className="mt-2 h-1 bg-linea">
-          <div className="h-full bg-marca transition-all" style={{ width: `${Math.round(progreso * 100)}%` }} />
+    <div aria-live="polite">
+      <div className="flex items-center justify-between gap-3 border-b border-linea px-5 py-4 sm:px-7">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-acento">En proceso</p>
+          <h1 className="font-serif text-[22px] font-semibold leading-tight text-marca sm:text-[25px]">Generando la minuta</h1>
         </div>
-      )}
-      {etapa === "transcribiendo" && (
-        <p className="mt-2.5 text-[12px] leading-relaxed text-tenue">Suele tardar entre la cuarta parte y la mitad de la duración de la grabación.</p>
-      )}
-    </section>
+        <span className="tabular-nums text-[13px] text-tenue">{duracion(segundos)}</span>
+      </div>
+
+      <div className="grid gap-5 px-5 py-5 sm:px-7 md:grid-cols-2 md:gap-8">
+        <section>
+          <Encabezado n={1} titulo="Datos cargados" />
+          <dl className="mt-3 space-y-2.5 text-[13.5px]">
+            <div className="flex items-start gap-2.5">
+              {fuente === "archivo" ? <Mic size={16} className="mt-0.5 shrink-0 text-marca" /> : <Type size={16} className="mt-0.5 shrink-0 text-marca" />}
+              <div className="min-w-0">
+                <dt className="text-[11px] font-semibold uppercase tracking-wider text-tenue">{fuente === "archivo" ? "Grabación" : "Texto"}</dt>
+                <dd className="break-all text-tinta">
+                  {fuente === "archivo" && archivo
+                    ? `${archivo.name} · ${tamanoLegible(archivo.size)}`
+                    : `${caracteres.toLocaleString("es")} caracteres`}
+                </dd>
+              </div>
+            </div>
+            {datos.map(([etiqueta, valor]) => (
+              <div key={etiqueta} className="pl-[26px]">
+                <dt className="text-[11px] font-semibold uppercase tracking-wider text-tenue">{etiqueta}</dt>
+                <dd className="line-clamp-2 text-tinta">{valor}</dd>
+              </div>
+            ))}
+            {datos.length === 0 && <p className="pl-[26px] text-[12.5px] text-tenue">Sin datos adicionales de la reunión.</p>}
+          </dl>
+        </section>
+
+        <section>
+          <Encabezado n={2} titulo="Avance" />
+          <ol className="mt-3">
+            {pasos.map((p, i) => (
+              <li key={p.id} className="relative flex gap-3 pb-4 last:pb-0">
+                {i < pasos.length - 1 && <span className={`absolute left-[8px] top-6 h-[calc(100%-20px)] w-px ${i < actual ? "bg-exito" : "bg-borde"}`} />}
+                {i < actual ? (
+                  <CircleCheck size={17} className="relative mt-0.5 shrink-0 bg-white text-exito" />
+                ) : i === actual ? (
+                  <LoaderCircle size={17} className="relative mt-0.5 shrink-0 animate-spin bg-white text-marca" />
+                ) : (
+                  <Circle size={17} className="relative mt-0.5 shrink-0 bg-white text-borde" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className={`text-[13.5px] ${i === actual ? "font-semibold text-tinta" : i < actual ? "text-tinta" : "text-tenue"}`}>{p.nombre}</p>
+                    {i === actual && p.id === "subiendo" && <span className="tabular-nums text-[12.5px] text-tenue">{Math.round(progreso * 100)} %</span>}
+                    {i < actual && <span className="text-[12px] text-exito">Listo</span>}
+                  </div>
+                  <p className="text-[12px] text-tenue">{p.detalle}</p>
+                  {i === actual && p.id === "subiendo" && (
+                    <div className="mt-1.5 h-1 bg-linea">
+                      <div className="h-full bg-marca transition-all" style={{ width: `${Math.round(progreso * 100)}%` }} />
+                    </div>
+                  )}
+                  {i === actual && p.id === "transcribiendo" && (
+                    <p className="mt-1 text-[12px] text-acento">Suele tardar entre la cuarta parte y la mitad de la duración de la grabación.</p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </div>
+    </div>
   );
 }

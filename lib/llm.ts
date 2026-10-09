@@ -65,7 +65,7 @@ export async function generarEstructurado<T extends z.ZodType>(opts: {
 
 function explicarError(e: InstanceType<typeof Anthropic.APIError>): string {
   const p = proveedor();
-  if (p === "bedrock" && /token.*expired|expired.*token|security token/i.test(e.message)) {
+  if (p === "bedrock" && /token.*expired|expired.*token|security token|resolve aws credentials|session has expired/i.test(e.message)) {
     return "Las credenciales de AWS del servidor vencieron. Renuévelas (en local: aws login --profile reux) y vuelva a intentar.";
   }
   if (p === "bedrock" && e.status === 404 && /use case/i.test(e.message)) {

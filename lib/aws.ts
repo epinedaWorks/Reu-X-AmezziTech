@@ -15,13 +15,13 @@ export function bucket(): string {
 export const s3 = new S3Client({ region: REGION });
 export const transcribe = new TranscribeClient({ region: REGION });
 
-const CODIGOS_CREDENCIALES = ["ExpiredToken", "ExpiredTokenException", "TokenRefreshRequired", "InvalidToken", "UnrecognizedClientException"];
+const CODIGOS_CREDENCIALES = ["CredentialsProviderError", "ExpiredToken", "ExpiredTokenException", "TokenRefreshRequired", "InvalidToken", "UnrecognizedClientException"];
 
 // Convierte errores de credenciales de AWS en una respuesta clara para la interfaz.
 export function respuestaErrorAws(e: unknown): Response {
   const nombre = (e as { name?: string })?.name ?? "";
   const mensaje = e instanceof Error ? e.message : String(e);
-  if (CODIGOS_CREDENCIALES.includes(nombre) || /token.*expired|expired.*token/i.test(mensaje)) {
+  if (CODIGOS_CREDENCIALES.includes(nombre) || /token.*expired|expired.*token|resolve aws credentials|could not load credentials|session has expired/i.test(mensaje)) {
     return Response.json(
       { error: "Las credenciales de AWS del servidor vencieron. Renuévelas (en local: aws login --profile reux) y vuelva a intentar." },
       { status: 503 },
