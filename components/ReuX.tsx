@@ -239,25 +239,25 @@ export function ReuX() {
   return (
     <div className="flex h-dvh flex-col">
       {/* Barra superior */}
-      <header className="no-print flex h-14 shrink-0 items-center justify-between gap-3 border-b border-borde bg-white px-4 sm:px-5">
+      <header className="no-print flex h-[68px] shrink-0 items-center justify-between gap-3 border-b border-borde bg-white px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-          <div className="grid h-8 w-8 shrink-0 place-items-center bg-marca font-serif text-[15px] font-bold text-white">R</div>
-          <span className="text-[15px] font-semibold tracking-tight text-marca">Reu-X</span>
-          <span className="hidden h-4 w-px bg-borde sm:block" />
-          <span className="hidden truncate text-[13px] text-tenue sm:block">Actas y minutas de reunión</span>
+          <div className="grid h-10 w-10 shrink-0 place-items-center bg-marca font-serif text-[19px] font-bold text-white">R</div>
+          <div className="min-w-0 leading-tight">
+            <p className="text-[20px] font-bold tracking-tight text-marca sm:text-[22px]">Reu-X</p>
+            <p className="hidden truncate text-[12.5px] text-tenue sm:block">Actas y minutas de reunión</p>
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-3 text-[12.5px]">
+        <div className="flex shrink-0 items-center gap-2.5 text-[12.5px] sm:gap-4">
           {demo && <span className="border border-acento/40 bg-acento/10 px-2 py-0.5 font-medium text-acento">Demostración</span>}
-          <span className="hidden items-center gap-1.5 text-tenue md:inline-flex">
+          <span className="hidden items-center gap-1.5 text-tenue xl:inline-flex">
             <Server size={14} /> AWS · us-west-1
           </span>
-          {minuta && !ocupado ? (
-            <Boton onClick={nuevaReunion} icono={Plus}>
-              Nueva reunión
+          {minuta && !ocupado && (
+            <Boton onClick={nuevaReunion} icono={Plus} titulo="Nueva reunión">
+              <span className="hidden sm:inline">Nueva reunión</span>
             </Boton>
-          ) : (
-            <span className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] text-tenue sm:block">Amezzi</span>
           )}
+          <Firma className="border-l border-borde pl-3 text-right sm:pl-4" />
         </div>
       </header>
 
@@ -279,7 +279,7 @@ export function ReuX() {
               <>
                 <div className="border-b border-linea px-5 py-4 sm:px-7">
                   <h1 className="font-serif text-[22px] font-semibold leading-tight text-marca sm:text-[25px]">Nueva minuta de reunión</h1>
-                  <p className="mt-0.5 text-[13px] text-tenue">
+                  <p className="mt-0.5 hidden text-[13px] text-tenue sm:block">
                     Cargue la grabación o el texto de la reunión. Reu-X transcribe, identifica a los participantes y redacta el acta.
                   </p>
                 </div>
@@ -516,6 +516,18 @@ export function ReuX() {
           <Check size={15} /> {aviso}
         </div>
       )}
+    </div>
+  );
+}
+
+// Autoría del producto: Amezzi Tech.
+function Firma({ className = "" }: { className?: string }) {
+  return (
+    <div className={className}>
+      <p className="text-[15px] font-bold leading-tight tracking-tight text-marca sm:text-[17px]">
+        Amezzi <span className="text-acento">Tech</span>
+      </p>
+      <p className="text-[10.5px] leading-tight text-tenue sm:text-[12px]">by Ing. Erick J. Pineda Amézquita</p>
     </div>
   );
 }

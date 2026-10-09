@@ -6,8 +6,8 @@ const sans = IBM_Plex_Sans({ variable: "--font-plex", subsets: ["latin"], weight
 const serif = Source_Serif_4({ variable: "--font-serif4", subsets: ["latin"], weight: ["400", "600", "700"] });
 
 export const metadata: Metadata = {
-  title: "Reu-X · Amezzi",
-  description: "Actas y minutas de reunión a partir de grabaciones, videos o transcripciones.",
+  title: "Reu-X · Amezzi Tech",
+  description: "Actas y minutas de reunión a partir de grabaciones, videos o transcripciones. Amezzi Tech, by Ing. Erick J. Pineda Amézquita.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
