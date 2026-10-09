@@ -14,4 +14,4 @@ systemctl daemon-reload
 systemctl restart reux-entorno reux
 systemctl reload caddy || systemctl restart caddy
 
-echo "Publicada la versión $(git rev-parse --short HEAD)"
+echo "Publicada la versión $(sudo -u reux git rev-parse --short HEAD)"
