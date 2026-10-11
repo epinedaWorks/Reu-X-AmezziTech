@@ -1,4 +1,5 @@
 import { exigirSesion } from "@/lib/autorizacion";
+import { registrar } from "@/lib/actividad";
 import { MinutaSchema } from "@/lib/esquemas";
 import { consumirCuota, cuotaAgotada } from "@/lib/usuarios";
 import { TEXTO_MAXIMO } from "@/lib/formatos";
@@ -26,8 +27,9 @@ export async function POST(req: Request) {
   const agotada = cuotaAgotada(a.datos.registro);
   if (agotada) return Response.json({ error: agotada }, { status: 429 });
 
-  const { texto, contexto } = (await req.json()) as {
+  const { texto, contexto, proceso } = (await req.json()) as {
     texto?: string;
+    proceso?: string;
     contexto?: { titulo?: string; fecha?: string; lugar?: string; participantes?: string; notas?: string };
   };
   if (!texto?.trim()) {
@@ -50,14 +52,19 @@ export async function POST(req: Request) {
 
   const prompt = `${datos.length ? `Datos proporcionados por el usuario:\n${datos.join("\n")}\n\n` : ""}<reunion>\n${texto}\n</reunion>\n\nRedacta la minuta de esta reunión.`;
 
+  const usuario = a.datos.sesion.usuario;
+  await registrar(usuario, proceso, { tipo: "redaccion_iniciada", caracteres: texto.length });
   if (proveedor() === "demo") {
+    await registrar(usuario, proceso, { tipo: "minuta", titulo: `${MINUTA_EJEMPLO.titulo} (demo)` });
     return Response.json({ minuta: MINUTA_EJEMPLO, demo: true });
   }
   try {
     const minuta = await generarEstructurado({ system: SYSTEM, prompt, schema: MinutaSchema });
     if (a.datos.registro) await consumirCuota(a.datos.registro.usuario);
+    await registrar(usuario, proceso, { tipo: "minuta", titulo: minuta.titulo });
     return Response.json({ minuta });
   } catch (e) {
+    await registrar(usuario, proceso, { tipo: "fallo", etapa: "Redacción", error: e instanceof Error ? e.message : String(e) });
     if (e instanceof ErrorLLM) return Response.json({ error: e.message }, { status: 502 });
     throw e;
   }

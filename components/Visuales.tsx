@@ -72,11 +72,13 @@ function Ajustado({ children, completa }: { children: React.ReactNode; completa:
 
 export function Visuales({
   minuta,
+  proceso,
   activo,
   onImagen,
   onError,
 }: {
   minuta: Minuta;
+  proceso: string;
   activo: boolean;
   onImagen: (obtener: (() => Promise<Imagen>) | null) => void;
   onError: (e: string) => void;
@@ -101,7 +103,7 @@ export function Visuales({
         const r = await fetch("/api/diagrama", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ minuta, tipo: t }),
+          body: JSON.stringify({ minuta, tipo: t, proceso }),
         });
         const d = await r.json();
         if (!r.ok || d.error) throw new Error(d.error ?? `Error ${r.status}`);
@@ -112,7 +114,7 @@ export function Visuales({
         setCargando(null);
       }
     },
-    [generados, minuta, onError],
+    [generados, minuta, proceso, onError],
   );
 
   // El mapa mental es la primera vista: se genera la primera vez que se abre

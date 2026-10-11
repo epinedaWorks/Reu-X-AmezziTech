@@ -86,6 +86,8 @@ export function ReuX() {
   const [pestana, setPestana] = useState<Pestana>("minuta");
 
   const [version, setVersion] = useState(0);
+  // Identificador de la reunión en la bitácora de actividad (lo registra el servidor).
+  const [proceso, setProceso] = useState("");
   const [aviso, setAviso] = useState<string | null>(null);
 
   const inputArchivo = useRef<HTMLInputElement>(null);
@@ -132,9 +134,9 @@ export function ReuX() {
     setArchivo(f);
   }
 
-  async function redactar(contenido: string) {
+  async function redactar(contenido: string, id: string) {
     iniciarEtapa("redactando");
-    const r = await postJSON<{ minuta: Minuta; demo?: boolean }>("/api/minuta", { texto: contenido, contexto });
+    const r = await postJSON<{ minuta: Minuta; demo?: boolean }>("/api/minuta", { texto: contenido, contexto, proceso: id });
     setMinuta(r.minuta);
     setDemo(Boolean(r.demo));
     setVersion((v) => v + 1);
@@ -143,6 +145,9 @@ export function ReuX() {
 
   async function procesar() {
     setError(null);
+    const id = crypto.randomUUID();
+    setProceso(id);
+    let subiendo = false;
     try {
       let contenido = texto;
       if (fuente === "archivo") {
@@ -153,14 +158,17 @@ export function ReuX() {
           nombre: archivo.name,
           tipo: archivo.type,
           tamano: archivo.size,
+          proceso: id,
         });
+        subiendo = true;
         await subirConProgreso(url, archivo, setProgreso);
+        subiendo = false;
 
         iniciarEtapa("transcribiendo");
-        const { trabajo } = await postJSON<{ trabajo: string }>("/api/transcribir", { key });
+        const { trabajo } = await postJSON<{ trabajo: string }>("/api/transcribir", { key, proceso: id });
         for (;;) {
           await espera(5000);
-          const e = await postJSON<{ estado: string; texto?: string; error?: string }>("/api/transcribir/estado", { trabajo });
+          const e = await postJSON<{ estado: string; texto?: string; error?: string }>("/api/transcribir/estado", { trabajo, proceso: id });
           if (e.estado === "listo") {
             contenido = e.texto ?? "";
             break;
@@ -173,9 +181,12 @@ export function ReuX() {
         if (!contenido.trim()) throw new Error("Escribe o pega el contenido de la reunión.");
         setTranscripcion(contenido);
       }
-      await redactar(contenido);
+      await redactar(contenido, id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const mensaje = e instanceof Error ? e.message : String(e);
+      setError(mensaje);
+      // La subida va directo del navegador a S3: el servidor no se entera si falla.
+      if (subiendo) postJSON("/api/actividad", { proceso: id, etapa: "Subida a S3", error: mensaje }).catch(() => {});
     } finally {
       setEtapa(null);
     }
@@ -184,7 +195,7 @@ export function ReuX() {
   async function regenerar() {
     setError(null);
     try {
-      await redactar(transcripcion);
+      await redactar(transcripcion, proceso || crypto.randomUUID());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -469,7 +480,7 @@ export function ReuX() {
               aria-hidden={pestana !== "diagrama"}
               inert={pestana !== "diagrama"}
             >
-              <Visuales key={version} minuta={minuta} activo={pestana === "diagrama"} onImagen={alImagen} onError={setError} />
+              <Visuales key={version} minuta={minuta} proceso={proceso} activo={pestana === "diagrama"} onImagen={alImagen} onError={setError} />
             </div>
 
             {pestana === "transcripcion" && (

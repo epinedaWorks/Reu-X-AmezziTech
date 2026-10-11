@@ -1,5 +1,6 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { registrar } from "@/lib/actividad";
 import { bucket, s3, respuestaErrorAws } from "@/lib/aws";
 import { exigirSesion } from "@/lib/autorizacion";
 import { EXTENSIONES_MEDIA, TAMANO_MAXIMO } from "@/lib/formatos";
@@ -22,10 +23,11 @@ async function manejar(req: Request) {
   if (agotada) return Response.json({ error: agotada }, { status: 429 });
   const maxMB = a.datos.registro?.maxMB ?? 0;
 
-  const { nombre, tipo, tamano } = (await req.json()) as {
+  const { nombre, tipo, tamano, proceso } = (await req.json()) as {
     nombre?: string;
     tipo?: string;
     tamano?: number;
+    proceso?: string;
   };
   const ext = nombre?.split(".").pop()?.toLowerCase() ?? "";
   if (!nombre || !EXTENSIONES_MEDIA.includes(ext)) {
@@ -52,5 +54,9 @@ async function manejar(req: Request) {
     new PutObjectCommand({ Bucket: bucket(), Key: key, ContentType: tipo || "application/octet-stream" }),
     { expiresIn: 3600 },
   );
+  await registrar(a.datos.sesion.usuario, proceso, {
+    tipo: "subida",
+    archivo: { nombre: nombre.slice(-120), mb: Math.round((tamano / 1024 / 1024) * 10) / 10 },
+  });
   return Response.json({ key, url });
 }

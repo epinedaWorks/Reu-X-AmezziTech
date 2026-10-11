@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, CircleAlert, KeyRound, LoaderCircle, Pencil, RotateCcw, ShieldCheck, Trash, UserPlus, X } from "lucide-react";
+import { Activity, ArrowLeft, CircleAlert, KeyRound, LoaderCircle, Pencil, Power, PowerOff, RotateCcw, ShieldCheck, Trash, UserPlus, X } from "lucide-react";
+import { ActividadUsuario } from "./ActividadUsuario";
 import { BarraSuperior } from "./BarraSuperior";
 
 type Rol = "admin" | "usuario" | "participante";
@@ -48,12 +49,15 @@ export function AdminUsuarios() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [viendo, setViendo] = useState<string | null>(null); // bitácora abierta
+  const [cambiando, setCambiando] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     try {
       const d = await api<{ usuarios: Usuario[]; principal: string | null }>("/api/usuarios", "GET");
       setUsuarios(d.usuarios.sort((a, b) => a.usuario.localeCompare(b.usuario)));
       setPrincipal(d.principal);
+      setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -125,6 +129,18 @@ export function AdminUsuarios() {
     }
   }
 
+  async function alternarActivo(u: Usuario) {
+    setCambiando(u.usuario);
+    await accion(
+      () => api(`/api/usuarios/${encodeURIComponent(u.usuario)}`, "PATCH", { activo: !u.activo }),
+      u.activo ? `"${u.usuario}" deshabilitado` : `"${u.usuario}" habilitado`,
+    );
+    if (editando === u.usuario) setForm((f) => ({ ...f, activo: !u.activo }));
+    setCambiando(null);
+  }
+
+  const accionFila = "inline-flex items-center gap-1 whitespace-nowrap font-semibold hover:underline disabled:opacity-50";
+
   const campo =
     "w-full border border-borde bg-white px-2.5 py-1.5 text-[13.5px] text-tinta outline-none transition focus:border-marca focus:ring-2 focus:ring-marca/10 disabled:bg-fondo disabled:text-tenue";
   const etiqueta = "mb-1 block text-[11px] font-semibold uppercase tracking-wider text-tenue";
@@ -149,10 +165,11 @@ export function AdminUsuarios() {
         </button>
       </div>
 
-      <main className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <main className="relative grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(0,1fr)_380px]">
+        {viendo && <ActividadUsuario usuario={viendo} onCerrar={() => setViendo(null)} />}
         {/* Lista */}
         <section className="panel-scroll min-h-0 overflow-auto p-4 sm:p-6">
-          <table className="w-full min-w-[640px] border-collapse border border-borde bg-white text-[13.5px]">
+          <table className="w-full min-w-[760px] border-collapse border border-borde bg-white text-[13.5px]">
             <thead>
               <tr className="bg-marca-suave text-left text-[11px] uppercase tracking-wider text-marca">
                 <th className="px-3 py-2 font-semibold">Usuario</th>
@@ -178,26 +195,48 @@ export function AdminUsuarios() {
                   <td className="px-3 py-2.5 text-exito">Activo</td>
                   <td className="px-3 py-2.5 text-tenue">Sin límite</td>
                   <td className="px-3 py-2.5 text-tenue">2 GB</td>
-                  <td />
+                  <td className="px-3 py-2.5 text-right">
+                    <button onClick={() => setViendo(principal)} className={`${accionFila} text-marca`}>
+                      <Activity size={13} /> Actividad
+                    </button>
+                  </td>
                 </tr>
               )}
               {usuarios?.map((u) => (
-                <tr key={u.usuario} className={`border-t border-linea ${editando === u.usuario ? "bg-marca-suave/40" : ""}`}>
+                <tr key={u.usuario} className={`border-t border-linea ${editando === u.usuario ? "bg-marca-suave/40" : ""} ${u.activo ? "" : "text-tenue"}`}>
                   <td className="px-3 py-2.5">
                     <p className="font-medium">{u.usuario}</p>
                     {u.nombre !== u.usuario && <p className="text-[12px] text-tenue">{u.nombre}</p>}
                   </td>
                   <td className="px-3 py-2.5">{NOMBRE_ROL[u.rol]}</td>
-                  <td className={`px-3 py-2.5 ${u.activo ? "text-exito" : "text-peligro"}`}>{u.activo ? "Activo" : "Inactivo"}</td>
+                  <td className="px-3 py-2.5">
+                    <span className={`inline-block border px-1.5 py-px text-[11.5px] font-semibold ${u.activo ? "border-exito/30 bg-exito/5 text-exito" : "border-peligro/30 bg-peligro/5 text-peligro"}`}>
+                      {u.activo ? "Habilitado" : "Deshabilitado"}
+                    </span>
+                  </td>
                   <td className="px-3 py-2.5 tabular-nums">
                     {usadasHoy(u)}
                     {u.limiteDiario > 0 ? ` / ${u.limiteDiario}` : " · sin límite"}
                   </td>
                   <td className="px-3 py-2.5 tabular-nums">{u.maxMB > 0 ? `${u.maxMB} MB` : "2 GB"}</td>
-                  <td className="px-3 py-2.5 text-right">
-                    <button onClick={() => editar(u)} className="inline-flex items-center gap-1 font-semibold text-marca hover:underline">
-                      <Pencil size={13} /> Editar
-                    </button>
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center justify-end gap-3.5">
+                      <button onClick={() => setViendo(u.usuario)} className={`${accionFila} text-marca`}>
+                        <Activity size={13} /> Actividad
+                      </button>
+                      <button
+                        onClick={() => alternarActivo(u)}
+                        disabled={cambiando === u.usuario}
+                        title={u.activo ? "Impide que inicie sesión y cierra su acceso actual" : "Permite que vuelva a iniciar sesión"}
+                        className={`${accionFila} w-[96px] ${u.activo ? "text-peligro" : "text-exito"}`}
+                      >
+                        {cambiando === u.usuario ? <LoaderCircle size={13} className="animate-spin" /> : u.activo ? <PowerOff size={13} /> : <Power size={13} />}
+                        {u.activo ? "Deshabilitar" : "Habilitar"}
+                      </button>
+                      <button onClick={() => editar(u)} className={`${accionFila} text-marca`}>
+                        <Pencil size={13} /> Editar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -307,7 +346,7 @@ export function AdminUsuarios() {
             {editando && (
               <label className="flex cursor-pointer items-center gap-2 text-[13.5px]">
                 <input type="checkbox" checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} className="accent-[#1b2a41]" />
-                Usuario activo (puede iniciar sesión)
+                Usuario habilitado (puede iniciar sesión)
               </label>
             )}
 

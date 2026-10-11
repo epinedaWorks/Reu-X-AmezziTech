@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import { exigirSesion } from "@/lib/autorizacion";
+import { registrar } from "@/lib/actividad";
 import { FlujoSchema, InfografiaSchema, MapaSchema, type Minuta } from "@/lib/esquemas";
 import { FLUJO_EJEMPLO, INFOGRAFIA_EJEMPLO, MAPA_EJEMPLO } from "@/lib/ejemplo";
 import { ErrorLLM, generarEstructurado, proveedor } from "@/lib/llm";
@@ -59,12 +60,15 @@ ${COMUN}`,
 export async function POST(req: Request) {
   const a = await exigirSesion();
   if (!a.ok) return a.respuesta;
-  const { minuta, tipo } = (await req.json()) as { minuta?: Minuta; tipo?: string };
+  const { minuta, tipo, proceso } = (await req.json()) as { minuta?: Minuta; tipo?: string; proceso?: string };
   const visual = tipo ? VISUALES[tipo] : undefined;
   if (!minuta || !visual) {
     return Response.json({ error: "Falta la minuta o el tipo de visual." }, { status: 400 });
   }
+  const usuario = a.datos.sesion.usuario;
+  const nombre = { flujo: "Diagrama de flujo", mapa: "Mapa mental", infografia: "Infografía" }[tipo!] ?? tipo!;
   if (proveedor() === "demo") {
+    await registrar(usuario, proceso, { tipo: "visual", visual: nombre });
     return Response.json({ datos: visual.demo, demo: true });
   }
   try {
@@ -73,8 +77,10 @@ export async function POST(req: Request) {
       prompt: `<minuta>\n${JSON.stringify(minuta, null, 2)}\n</minuta>\n\n${visual.pedido}`,
       schema: visual.schema,
     });
+    await registrar(usuario, proceso, { tipo: "visual", visual: nombre });
     return Response.json({ datos });
   } catch (e) {
+    await registrar(usuario, proceso, { tipo: "fallo", etapa: nombre, error: e instanceof Error ? e.message : String(e) });
     if (e instanceof ErrorLLM) return Response.json({ error: e.message }, { status: 502 });
     throw e;
   }

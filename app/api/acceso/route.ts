@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { COOKIE_ACTIVA, COOKIE_SESION, DURACION_SESION_S, accesoActivo, crearSesion, iguales, type Sesion } from "@/lib/sesion";
+import { registrarAcceso } from "@/lib/actividad";
 import { obtener, verificarClave } from "@/lib/usuarios";
 
 // Límite simple de intentos por IP (en memoria del servidor).
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
   }
 
   intentos.delete(ip);
+  await registrarAcceso(sesion.usuario);
   const seguro = new URL(req.url).protocol === "https:" || req.headers.get("x-forwarded-proto") === "https";
   const res = NextResponse.json({ ok: true });
   res.cookies.set(COOKIE_SESION, await crearSesion(sesion), {
