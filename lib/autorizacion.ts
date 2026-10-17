@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { COOKIE_SESION, accesoActivo, leerSesion, type Sesion } from "./sesion";
 import { obtener, type Rol, type Usuario } from "./usuarios";
 
@@ -11,6 +12,10 @@ const LOCAL: Sesion = { usuario: "local", rol: "admin", principal: true };
 // Verifica la sesión en una ruta de la API. Para usuarios registrados consulta su estado
 // actual (activo, rol y límites), así un cambio del administrador aplica de inmediato.
 export async function exigirSesion(roles?: Rol[]): Promise<Resultado> {
+  // Siempre en cada solicitud: sin esto, una ruta GET sin parámetros (como /api/yo) se
+  // prerenderizaba al compilar, cuando el acceso aún no está configurado, y respondía
+  // para siempre "local · Administrador".
+  await connection();
   if (!accesoActivo()) return { ok: true, datos: { sesion: LOCAL } };
 
   const sesion = await leerSesion((await cookies()).get(COOKIE_SESION)?.value);

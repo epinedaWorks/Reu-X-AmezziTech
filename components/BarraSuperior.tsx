@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { Gauge, LogOut, Server, UsersRound } from "lucide-react";
+import { Gauge, LogOut, UsersRound } from "lucide-react";
 
 type Yo = { usuario: string; nombre: string; nombreRol: string; limiteDiario: number; usadasHoy: number };
 
@@ -59,9 +59,6 @@ export function BarraSuperior({ acciones, refrescar = 0 }: { acciones?: React.Re
         </div>
       </Link>
       <div className="flex shrink-0 items-center gap-2.5 text-[12.5px] sm:gap-4">
-        <span className="hidden items-center gap-1.5 text-tenue xl:inline-flex">
-          <Server size={14} /> AWS · us-west-1
-        </span>
         {yo && (
           <span className="hidden flex-col items-end leading-tight lg:flex" title={`Sesión: ${yo.usuario}`}>
             <span className="font-semibold text-tinta">{yo.nombre}</span>
