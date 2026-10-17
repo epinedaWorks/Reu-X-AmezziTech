@@ -1,11 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CircleAlert, LoaderCircle, LogIn } from "lucide-react";
 
 export default function Acceso() {
-  const router = useRouter();
   const [usuario, setUsuario] = useState("");
   const [clave, setClave] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -20,13 +18,17 @@ export default function Acceso() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usuario, clave }),
+        signal: AbortSignal.timeout(20_000),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error ?? "No se pudo iniciar sesión.");
-      router.replace("/");
-      router.refresh();
+      // Carga completa (no navegación del router): con la cookie recién creada, una
+      // navegación suave podía reutilizar la redirección a /acceso guardada en caché o
+      // competir con refresh(), y el botón se quedaba girando.
+      window.location.replace("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const tiempo = err instanceof DOMException && err.name === "TimeoutError";
+      setError(tiempo ? "El servidor tardó demasiado en responder. Intente de nuevo." : err instanceof Error ? err.message : String(err));
       setEnviando(false);
     }
   }

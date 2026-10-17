@@ -47,7 +47,8 @@ export async function POST(req: Request) {
   }
 
   intentos.delete(ip);
-  await registrarAcceso(sesion.usuario);
+  // En segundo plano: anotar el acceso en la bitácora no debe demorar la entrada.
+  void registrarAcceso(sesion.usuario);
   const seguro = new URL(req.url).protocol === "https:" || req.headers.get("x-forwarded-proto") === "https";
   const res = NextResponse.json({ ok: true });
   res.cookies.set(COOKIE_SESION, await crearSesion(sesion), {
