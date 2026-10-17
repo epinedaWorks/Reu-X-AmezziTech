@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { exigirSesion } from "@/lib/autorizacion";
 import { registrar } from "@/lib/actividad";
+import { guardarVisual } from "@/lib/reuniones";
 import { FlujoSchema, InfografiaSchema, MapaSchema, type Minuta } from "@/lib/esquemas";
 import { FLUJO_EJEMPLO, INFOGRAFIA_EJEMPLO, MAPA_EJEMPLO } from "@/lib/ejemplo";
 import { ErrorLLM, generarEstructurado, proveedor } from "@/lib/llm";
@@ -77,6 +78,7 @@ export async function POST(req: Request) {
       prompt: `<minuta>\n${JSON.stringify(minuta, null, 2)}\n</minuta>\n\n${visual.pedido}`,
       schema: visual.schema,
     });
+    await guardarVisual(usuario, proceso, tipo!, datos);
     await registrar(usuario, proceso, { tipo: "visual", visual: nombre });
     return Response.json({ datos });
   } catch (e) {

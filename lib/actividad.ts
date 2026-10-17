@@ -20,6 +20,7 @@ export type Proceso = {
   titulo?: string;
   error?: string;
   minutas: number; // 1 + regeneraciones
+  guardada?: boolean; // la reunión se puede volver a abrir (lib/reuniones.ts)
   visuales: string[];
   etapas: Etapa[];
 };
@@ -117,7 +118,7 @@ export type Evento =
   | { tipo: "transcripcion_iniciada" }
   | { tipo: "transcripcion_lista"; idioma?: string; caracteres: number }
   | { tipo: "redaccion_iniciada"; caracteres: number }
-  | { tipo: "minuta"; titulo: string }
+  | { tipo: "minuta"; titulo: string; guardada?: boolean }
   | { tipo: "visual"; visual: string }
   | { tipo: "fallo"; error: string; etapa?: string };
 
@@ -173,6 +174,7 @@ export function registrar(usuario: string, id: unknown, ev: Evento) {
         p.estado = "completado";
         p.fin = ahora;
         p.titulo = ev.titulo;
+        if (ev.guardada) p.guardada = true;
         p.error = undefined;
         p.minutas++;
         b.totales.minutas++;

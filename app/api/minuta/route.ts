@@ -1,5 +1,6 @@
 import { exigirSesion } from "@/lib/autorizacion";
 import { registrar } from "@/lib/actividad";
+import { guardarMinuta } from "@/lib/reuniones";
 import { MinutaSchema } from "@/lib/esquemas";
 import { consumirCuota, cuotaAgotada } from "@/lib/usuarios";
 import { TEXTO_MAXIMO } from "@/lib/formatos";
@@ -61,7 +62,8 @@ export async function POST(req: Request) {
   try {
     const minuta = await generarEstructurado({ system: SYSTEM, prompt, schema: MinutaSchema });
     if (a.datos.registro) await consumirCuota(a.datos.registro.usuario);
-    await registrar(usuario, proceso, { tipo: "minuta", titulo: minuta.titulo });
+    const guardada = await guardarMinuta(usuario, proceso, texto, minuta);
+    await registrar(usuario, proceso, { tipo: "minuta", titulo: minuta.titulo, guardada });
     return Response.json({ minuta });
   } catch (e) {
     await registrar(usuario, proceso, { tipo: "fallo", etapa: "Redacción", error: e instanceof Error ? e.message : String(e) });

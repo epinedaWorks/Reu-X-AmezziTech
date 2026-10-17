@@ -16,7 +16,8 @@ async function manejar(req: Request) {
   const a = await exigirSesion();
   if (!a.ok) return a.respuesta;
   const { key, proceso } = (await req.json()) as { key?: string; proceso?: string };
-  if (!key?.startsWith("entradas/")) {
+  const propia = key?.startsWith(`reuniones/${a.datos.sesion.usuario}/`) && !key.includes("..");
+  if (!key || !(key.startsWith("entradas/") || propia)) {
     return Response.json({ error: "Archivo inválido." }, { status: 400 });
   }
 

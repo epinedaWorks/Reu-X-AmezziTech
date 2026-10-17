@@ -21,7 +21,7 @@ const TIPOS: { id: Tipo; nombre: string; descripcion: string; icono: LucideIcon 
   { id: "tareas", nombre: "Responsables", descripcion: "Quién hace qué y para cuándo", icono: ListChecks },
 ];
 
-type Generados = { mapa?: Mapa; infografia?: DatosInfografia; flujo?: Flujo };
+export type Generados = { mapa?: Mapa; infografia?: DatosInfografia; flujo?: Flujo };
 
 function leerImagen(f: File | undefined, set: (url: string) => void) {
   if (!f || !f.type.startsWith("image/")) return;
@@ -73,18 +73,20 @@ function Ajustado({ children, completa }: { children: React.ReactNode; completa:
 export function Visuales({
   minuta,
   proceso,
+  iniciales,
   activo,
   onImagen,
   onError,
 }: {
   minuta: Minuta;
   proceso: string;
+  iniciales?: Generados; // visuales ya guardados de una reunión abierta desde el historial
   activo: boolean;
   onImagen: (obtener: (() => Promise<Imagen>) | null) => void;
   onError: (e: string) => void;
 }) {
   const [tipo, setTipo] = useState<Tipo>("mapa");
-  const [generados, setGenerados] = useState<Generados>({});
+  const [generados, setGenerados] = useState<Generados>(iniciales ?? {});
   const [cargando, setCargando] = useState<Tipo | null>(null);
   const [svg, setSvg] = useState<string | null>(null);
   const [codigoEditado, setCodigoEditado] = useState<string | null>(null);

@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Check, ChevronDown, Circle, CircleAlert, CircleCheck, Copy, Download, FileCheck, FileDown, FileText, LoaderCircle, Mic,
-  Network, Plus, Printer, RefreshCw, ScrollText, Type, Upload, X,
+  FolderOpen, Network, Plus, Printer, RefreshCw, ScrollText, Type, Upload, X,
 } from "lucide-react";
+import { MisReuniones } from "./MisReuniones";
 import { BarraSuperior } from "./BarraSuperior";
 import { MinutaVista } from "./MinutaVista";
-import { Visuales, type Imagen } from "./Visuales";
+import { Visuales, type Generados, type Imagen } from "./Visuales";
 import { REUNION_EJEMPLO } from "@/lib/ejemplo";
 import type { Minuta } from "@/lib/esquemas";
 import { descargar, minutaMarkdown, minutaWord, nombreArchivo } from "@/lib/exportar";
@@ -88,6 +89,12 @@ export function ReuX() {
   const [version, setVersion] = useState(0);
   // Identificador de la reunión en la bitácora de actividad (lo registra el servidor).
   const [proceso, setProceso] = useState("");
+
+  // Historial: reuniones guardadas que se vuelven a abrir sin procesarlas de nuevo.
+  const [verHistorial, setVerHistorial] = useState(false);
+  const [abriendo, setAbriendo] = useState<string | null>(null);
+  const [visualesGuardados, setVisualesGuardados] = useState<Generados | undefined>();
+  const [grabacion, setGrabacion] = useState<{ url: string; descarga: string; nombre: string; tipo: string } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
   const inputArchivo = useRef<HTMLInputElement>(null);
@@ -137,6 +144,7 @@ export function ReuX() {
   async function redactar(contenido: string, id: string) {
     iniciarEtapa("redactando");
     const r = await postJSON<{ minuta: Minuta; demo?: boolean }>("/api/minuta", { texto: contenido, contexto, proceso: id });
+    setVisualesGuardados(undefined);
     setMinuta(r.minuta);
     setDemo(Boolean(r.demo));
     setVersion((v) => v + 1);
@@ -203,7 +211,34 @@ export function ReuX() {
     }
   }
 
+  async function abrirReunion(id: string) {
+    setAbriendo(id);
+    setError(null);
+    try {
+      const r = await fetch(`/api/reuniones/${encodeURIComponent(id)}`);
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error ?? `Error ${r.status}`);
+      const g = d.reunion as { minuta: Minuta; transcripcion: string; visuales: Generados; grabacion: typeof grabacion };
+      setProceso(id);
+      setTranscripcion(g.transcripcion);
+      setVisualesGuardados(g.visuales);
+      setGrabacion(g.grabacion);
+      setMinuta(g.minuta);
+      setDemo(false);
+      setVersion((v) => v + 1);
+      setPestana("minuta");
+      setVerHistorial(false);
+    } catch (e) {
+      setVerHistorial(false);
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAbriendo(null);
+    }
+  }
+
   function nuevaReunion() {
+    setVisualesGuardados(undefined);
+    setGrabacion(null);
     setMinuta(null);
     setTranscripcion("");
     setArchivo(null);
@@ -255,6 +290,11 @@ export function ReuX() {
         acciones={
           <>
             {demo && <span className="border border-acento/40 bg-acento/10 px-2 py-0.5 font-medium text-acento">Demostración</span>}
+            {!ocupado && (
+              <Boton onClick={() => setVerHistorial(true)} icono={FolderOpen} titulo="Reuniones procesadas anteriormente">
+                <span className="hidden sm:inline">Mis reuniones</span>
+              </Boton>
+            )}
             {minuta && !ocupado && (
               <Boton onClick={nuevaReunion} icono={Plus} titulo="Nueva reunión">
                 <span className="hidden sm:inline">Nueva reunión</span>
@@ -480,7 +520,7 @@ export function ReuX() {
               aria-hidden={pestana !== "diagrama"}
               inert={pestana !== "diagrama"}
             >
-              <Visuales key={version} minuta={minuta} proceso={proceso} activo={pestana === "diagrama"} onImagen={alImagen} onError={setError} />
+              <Visuales key={version} minuta={minuta} proceso={proceso} iniciales={visualesGuardados} activo={pestana === "diagrama"} onImagen={alImagen} onError={setError} />
             </div>
 
             {pestana === "transcripcion" && (
@@ -503,6 +543,21 @@ export function ReuX() {
                     </Boton>
                   </div>
                 </div>
+                {grabacion && (
+                  <div className="mb-3 flex shrink-0 flex-wrap items-center gap-3 border border-borde bg-white px-3 py-2">
+                    {grabacion.tipo.startsWith("video/") ? (
+                      <video src={grabacion.url} controls preload="metadata" className="max-h-[200px] max-w-full bg-black" />
+                    ) : (
+                      <audio src={grabacion.url} controls preload="metadata" className="h-9 min-w-0 flex-1" />
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-[12.5px] text-tenue" title={grabacion.nombre}>
+                      Grabación original: {grabacion.nombre}
+                    </span>
+                    <a href={grabacion.descarga} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-marca hover:underline">
+                      <Download size={14} /> Descargar
+                    </a>
+                  </div>
+                )}
                 <textarea
                   value={transcripcion}
                   onChange={(e) => setTranscripcion(e.target.value)}
@@ -513,6 +568,8 @@ export function ReuX() {
           </div>
         </main>
       )}
+
+      {verHistorial && <MisReuniones abriendo={abriendo} onAbrir={abrirReunion} onCerrar={() => setVerHistorial(false)} />}
 
       {aviso && (
         <div className="no-print fixed bottom-6 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 bg-marca px-4 py-2 text-[13px] text-white shadow-lg">

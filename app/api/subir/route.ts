@@ -1,6 +1,7 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { registrar } from "@/lib/actividad";
+import { idValido, registrar } from "@/lib/actividad";
+import { anotarGrabacion, carpeta } from "@/lib/reuniones";
 import { bucket, s3, respuestaErrorAws } from "@/lib/aws";
 import { exigirSesion } from "@/lib/autorizacion";
 import { EXTENSIONES_MEDIA, TAMANO_MAXIMO } from "@/lib/formatos";
@@ -48,15 +49,19 @@ async function manejar(req: Request) {
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^\w.-]+/g, "_")
     .slice(-80);
-  const key = `entradas/${crypto.randomUUID()}-${limpio}`;
+  // Con identificador de reunión, la grabación se conserva junto a su minuta; si no, es temporal.
+  const usuario = a.datos.sesion.usuario;
+  const key = idValido(proceso) ? `${carpeta(usuario, proceso)}grabacion-${limpio}` : `entradas/${crypto.randomUUID()}-${limpio}`;
   const url = await getSignedUrl(
     s3,
     new PutObjectCommand({ Bucket: bucket(), Key: key, ContentType: tipo || "application/octet-stream" }),
     { expiresIn: 3600 },
   );
-  await registrar(a.datos.sesion.usuario, proceso, {
+  const mb = Math.round((tamano / 1024 / 1024) * 10) / 10;
+  if (idValido(proceso)) await anotarGrabacion(usuario, proceso, { key, nombre: nombre.slice(-120), tipo: tipo || "", mb });
+  await registrar(usuario, proceso, {
     tipo: "subida",
-    archivo: { nombre: nombre.slice(-120), mb: Math.round((tamano / 1024 / 1024) * 10) / 10 },
+    archivo: { nombre: nombre.slice(-120), mb },
   });
   return Response.json({ key, url });
 }
